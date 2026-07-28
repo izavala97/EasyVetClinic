@@ -28,7 +28,7 @@ To reset it to an empty schema, stop the API and run this command from the repos
 .\scripts\start-dev.ps1 -ResetDatabase
 ```
 
-The `ClinicDatabase` connection string is configured in [appsettings.json](appsettings.json). Use environment-specific configuration for a different local database location or for the future Azure SQL connection.
+The `ClinicDatabase` connection string and `Database:Provider` are configured in [appsettings.json](appsettings.json). Local development defaults to `Sqlite`. Production must set both `Database__Provider=SqlServer` and an Azure SQL `ConnectionStrings__ClinicDatabase` value only after SQL Server migrations have been generated and validated.
 
 ## Current Endpoints
 
@@ -51,4 +51,4 @@ The `ClinicDatabase` connection string is configured in [appsettings.json](appse
 
 ## Current State
 
-The API uses EF Core with SQLite for local development. The next backend slice will move the production connection to Azure SQL and replace the configured development clinic with a clinic identity resolved from EasyAuth/External ID claims.
+The API uses EF Core with SQLite for local development and includes the SQL Server EF Core provider for the production migration. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists.

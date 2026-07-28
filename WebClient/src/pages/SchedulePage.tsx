@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CalendarPlus, CalendarRange } from 'lucide-react'
-import { apiFetch, type Patient, type ScheduleAppointment, getJson } from '../api'
+import { apiFetch, type ClinicProfile, type Patient, type ScheduleAppointment, getJson } from '../api'
 
 function currentDate() {
   return new Date().toISOString().slice(0, 10)
@@ -12,6 +12,7 @@ export function SchedulePage() {
   const [appointments, setAppointments] = useState<ScheduleAppointment[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [patientId, setPatientId] = useState('')
+  const [clinicianName, setClinicianName] = useState('')
   const [time, setTime] = useState('09:00')
   const [reason, setReason] = useState('General consultation')
   const [notice, setNotice] = useState('')
@@ -37,6 +38,9 @@ export function SchedulePage() {
         setPatientId(data[0]?.id ?? '')
       })
       .catch(() => setError('Patients could not be loaded.'))
+    void getJson<ClinicProfile>('/api/clinic')
+      .then((profile) => setClinicianName(profile.veterinarianName))
+      .catch(() => setError('Clinic profile could not be loaded.'))
   }, [])
 
   async function createAppointment(event: FormEvent<HTMLFormElement>) {
@@ -51,7 +55,7 @@ export function SchedulePage() {
           patientId,
           startsAt: `${date}T${time}:00.000Z`,
           reason,
-          clinicianName: 'MVZ. Alondra Licona',
+          clinicianName,
         }),
       })
       if (!response.ok) throw new Error()
@@ -78,7 +82,7 @@ export function SchedulePage() {
           <label>Patient<select value={patientId} onChange={(event) => setPatientId(event.target.value)} required>{patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} - {patient.guardianName}</option>)}</select></label>
           <label>Time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></label>
           <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} required /></label>
-          <button className="primary-action" type="submit" disabled={!patientId}><CalendarPlus size={18} /> Add appointment</button>
+          <button className="primary-action" type="submit" disabled={!patientId || !clinicianName}><CalendarPlus size={18} /> Add appointment</button>
         </form>
       </section>
     </>

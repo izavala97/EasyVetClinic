@@ -20,7 +20,7 @@ All repository documentation and technical artifacts are written in English. Sou
 
 The current vertical slice includes an operational dashboard, patient search, consultation creation, and document draft preparation for health certificates, surgical consent, and boarding contracts. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
 
-The Azure App Service API and Azure Static Web App deployment resources are configured through GitHub Actions. Azure SQL production persistence, External ID/Easy Auth configuration, signed PDF generation, private file storage, and complete operational modules remain before production go-live. See [DEPLOYMENT.MD](DEPLOYMENT.MD) for the Azure configuration checklist.
+The Azure App Service API and Azure Static Web App deployment resources are configured through GitHub Actions. The API now exposes authenticated initial-clinic onboarding and supports an explicit future SQL Server provider selection, while SQLite remains the local default. External ID/Easy Auth browser sign-in, SQL Server migrations, signed PDF generation, private file storage, and complete operational modules remain before production go-live. See [DEPLOYMENT.MD](DEPLOYMENT.MD) for the Azure configuration checklist.
 
 ## Run Locally
 

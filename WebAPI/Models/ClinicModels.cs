@@ -188,3 +188,13 @@ public sealed record DocumentDraft(
     string GuardianName,
     string PreparedBy,
     IReadOnlyDictionary<string, string> Fields);
+
+public sealed record CurrentUserSummary(string ObjectId, string DisplayName, string? ClinicId, string? ClinicName, string? Role);
+
+public sealed record CreateInitialClinicRequest(
+    string Name,
+    string Address,
+    string LogoUrl,
+    string VeterinarianName,
+    string VeterinarianTitles,
+    string VeterinarianLicenseNumber);

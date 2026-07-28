@@ -6,8 +6,24 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+var connectionString = builder.Configuration.GetConnectionString("ClinicDatabase")
+	?? throw new InvalidOperationException("The ClinicDatabase connection string is required.");
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
 builder.Services.AddDbContext<ClinicDbContext>(options =>
-	options.UseSqlite(builder.Configuration.GetConnectionString("ClinicDatabase")));
+{
+	if (string.Equals(databaseProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseSqlServer(connectionString);
+	}
+	else if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseSqlite(connectionString);
+	}
+	else
+	{
+		throw new InvalidOperationException("Database:Provider must be Sqlite or SqlServer.");
+	}
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentClinic>();
 var authenticationScheme = builder.Environment.IsDevelopment()

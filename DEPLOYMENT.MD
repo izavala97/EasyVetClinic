@@ -9,11 +9,17 @@ This checklist describes the Azure resources and configuration needed before pro
 - Static Web App: `EasyVetClinic-WebCli`, deployed by [azure-static-web-apps-red-plant-0ec64f60f.yml](.github/workflows/azure-static-web-apps-red-plant-0ec64f60f.yml).
 - Static Web App production domain: `https://red-plant-0ec64f60f.azurestaticapps.net`.
 - API default domain: `https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net`.
-- The API is currently built for local SQLite. Do not configure an Azure SQL connection string until the application has been migrated to the SQL Server EF Core provider and SQL Server migrations have been generated.
+- The API defaults to SQLite through `Database__Provider=Sqlite`. Azure SQL support is installed but must not be enabled until SQL Server migrations have been generated and applied.
 
 ## GitHub Actions configuration
 
 - Add the repository Actions variable `VITE_API_BASE_URL` with the API default domain above, without a trailing slash. This is intentionally a variable, not a secret: Vite embeds it in the browser bundle.
+- Add these non-secret repository Actions variables for the Static Web App build. They are embedded in the browser bundle and therefore must not contain secrets:
+	- `VITE_ENTRA_TENANT_ID`: `134a684d-11ef-42be-a5dc-b315dcb31571`
+	- `VITE_ENTRA_CLIENT_ID`: `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`
+	- `VITE_ENTRA_API_SCOPE`: `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`
+	- `VITE_ENTRA_AUTHORITY`: `https://<external-id-domain>.ciamlogin.com/`, using the External ID tenant's domain prefix.
+	Their expected names and formats are in [WebClient/.env.example](WebClient/.env.example).
 - The Static Web App deployment token is already stored as the GitHub secret created by Azure. Do not copy or commit that token.
 - The API workflow uses the OpenID Connect credentials created by Azure. Do not rename or delete the `AZUREAPPSERVICE_*` GitHub secrets unless the federated credential is replaced at the same time.
 - Pushes to `main` deploy both apps. Check the GitHub Actions runs after each deployment.
@@ -35,6 +41,8 @@ This checklist describes the Azure resources and configuration needed before pro
 - Production sign-out redirect URI.
 - Authentication policy with MFA and approved user flows.
 - The External ID tenant ID, SPA client ID, API client ID, and API scope value.
+- Configured values: tenant ID `134a684d-11ef-42be-a5dc-b315dcb31571`; SPA client ID `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`; API client ID `a0c84c31-b8c4-4d60-8e25-74ace0817d54`; API scope `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`.
+- The `EasyVetClinicSignUpSignIn` flow uses email/password with display name and email address.
 
 ## 3. App Service Easy Auth
 
@@ -54,6 +62,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - A contained database user for the App Service managed identity with required application permissions.
 - Production backup retention, geo-redundancy, and sizing decisions.
 - A deployment migration process that runs before the application release, not at API startup.
+- When SQL Server migrations are ready, set `Database__Provider=SqlServer` and `ConnectionStrings__ClinicDatabase` together in the API App Service. Do not set only one of these values.
 
 ## 5. Storage and secrets
 
@@ -82,7 +91,10 @@ This checklist describes the Azure resources and configuration needed before pro
 
 ## 8. Initial access setup
 
-- Create the super administrator Entra user and map their Entra object ID to the `SuperAdmin` role.
+- The first authenticated External ID user creates the initial clinic through `POST /api/onboarding/clinic`; that operation creates an active `ClinicAdmin` membership and is rejected once any clinic exists.
+- The onboarding request requires the App Service Easy Auth principal and is never available anonymously.
+- `GET /api/me` returns the authenticated user and current membership context for the frontend shell. A user without a membership receives identity context with no clinic values and can be routed to initial onboarding after browser sign-in is implemented.
+- Create the super administrator Entra user and map their Entra object ID to the `SuperAdmin` role when platform-level administration is introduced.
 - Create each clinic and map clinic administrators, veterinarians, and staff through `ClinicUsers`.
 - Verify every production user has an active clinic membership before granting access.
 - For users assigned to multiple clinics, have the SPA send `X-EasyVet-Clinic-Id` after the user selects an authorized clinic. The API verifies this header against the authenticated user's memberships.

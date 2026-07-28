@@ -16,7 +16,7 @@ export function DashboardPage() {
   return (
     <>
       <header className="topbar">
-        <div><p className="eyebrow">{dashboard?.clinicName ?? 'Loading clinic...'}</p><h1>Good morning, Alondra</h1></div>
+        <div><p className="eyebrow">{dashboard?.clinicName ?? 'Clinic workspace'}</p><h1>Dashboard</h1></div>
         <Link className="primary-action" to="/patients"><ClipboardPlus size={18} /> Start consultation</Link>
       </header>
 

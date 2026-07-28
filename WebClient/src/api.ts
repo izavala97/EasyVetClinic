@@ -45,6 +45,14 @@ export type ClinicProfile = {
   veterinarianLicenseNumber: string
 }
 
+export type CurrentUser = {
+  objectId: string
+  displayName: string
+  clinicId: string | null
+  clinicName: string | null
+  role: string | null
+}
+
 export type ConsultationHistoryItem = {
   id: string
   startedAt: string
@@ -109,12 +117,26 @@ export type SaleReceipt = {
   lines: { productName: string; quantity: number; unitPrice: number }[]
 }
 
+type AccessTokenProvider = () => Promise<string | null>
+
+let accessTokenProvider: AccessTokenProvider | undefined
+
+export function setAccessTokenProvider(provider: AccessTokenProvider | undefined) {
+  accessTokenProvider = provider
+}
+
 function apiUrl(path: string): string {
   return `${import.meta.env.VITE_API_BASE_URL ?? ''}${path}`
 }
 
-export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), init)
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers)
+  const accessToken = await accessTokenProvider?.()
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  return fetch(apiUrl(path), { ...init, headers })
 }
 
 export async function getJson<T>(path: string): Promise<T> {

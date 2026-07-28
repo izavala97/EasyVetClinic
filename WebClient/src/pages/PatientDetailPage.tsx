@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ClipboardPlus, FileText, Pencil, Save } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { apiFetch, type ConsultationHistoryItem, type Guardian, type Patient, getJson } from '../api'
+import { apiFetch, type ClinicProfile, type ConsultationHistoryItem, type Guardian, type Patient, getJson } from '../api'
 
 const documentOptions = [
   { id: 'health-certificate', label: 'Health certificate' },
@@ -33,10 +33,11 @@ export function PatientDetailPage() {
   async function startConsultation() {
     if (!patient) return
     try {
+      const profile = await getJson<ClinicProfile>('/api/clinic')
       const response = await apiFetch(`/api/patients/${patient.id}/consultations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clinicianName: 'MVZ. Alondra Licona' }),
+        body: JSON.stringify({ clinicianName: profile.veterinarianName }),
       })
       if (!response.ok) throw new Error('Could not start consultation.')
       const consultation = await response.json() as { id: string }
@@ -49,10 +50,13 @@ export function PatientDetailPage() {
   async function prepareDocument(documentType: string) {
     if (!patient) return
     try {
-      const document = await getJson<{ title: string; fields: Record<string, string> }>(`/api/patients/${patient.id}/documents/${documentType}`)
+      const [document, profile] = await Promise.all([
+        getJson<{ title: string; fields: Record<string, string> }>(`/api/patients/${patient.id}/documents/${documentType}`),
+        getJson<ClinicProfile>('/api/clinic'),
+      ])
       const detail = Object.entries(document.fields).map(([key, value]) => `${key}: ${value}`).join('\n')
       const preview = window.open('', '_blank', 'noopener,noreferrer')
-      preview?.document.write(`<pre>${document.title}\n\n${detail}\n\nPrepared by MVZ. Alondra Licona</pre>`)
+      preview?.document.write(`<pre>${document.title}\n\n${detail}\n\nPrepared by ${profile.veterinarianName}</pre>`)
       preview?.document.close()
       preview?.print()
     } catch {

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthenticationProvider, initializeAuthentication } from './auth.tsx'
 import './index.css'
 import App from './App.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
@@ -14,10 +15,14 @@ import { ClinicProfilePage } from './pages/ClinicProfilePage.tsx'
 import { RegistrationPage } from './pages/RegistrationPage.tsx'
 import { PrescriptionPage } from './pages/PrescriptionPage.tsx'
 import { SchedulePage } from './pages/SchedulePage.tsx'
+import { OnboardingPage } from './pages/OnboardingPage.tsx'
+
+await initializeAuthentication()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <AuthenticationProvider>
+      <BrowserRouter>
       <Routes>
         <Route element={<App />}>
           <Route index element={<DashboardPage />} />
@@ -32,8 +37,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="point-of-sale" element={<PointOfSalePage />} />
           <Route path="clinic-profile" element={<ClinicProfilePage />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthenticationProvider>
   </StrictMode>,
 )
