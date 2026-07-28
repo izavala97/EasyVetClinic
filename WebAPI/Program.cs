@@ -1,7 +1,9 @@
 using EasyVetClinic.Api.Data;
 using EasyVetClinic.Api.Authentication;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,12 +28,29 @@ builder.Services.AddDbContext<ClinicDbContext>(options =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentClinic>();
-var authenticationScheme = builder.Environment.IsDevelopment()
-	? DevelopmentAuthenticationHandler.SchemeName
-	: EasyAuthAuthenticationHandler.SchemeName;
-builder.Services.AddAuthentication(authenticationScheme)
-	.AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>(DevelopmentAuthenticationHandler.SchemeName, _ => { })
-	.AddScheme<AuthenticationSchemeOptions, EasyAuthAuthenticationHandler>(EasyAuthAuthenticationHandler.SchemeName, _ => { });
+if (builder.Environment.IsDevelopment())
+{
+	builder.Services.AddAuthentication(DevelopmentAuthenticationHandler.SchemeName)
+		.AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>(DevelopmentAuthenticationHandler.SchemeName, _ => { });
+}
+else
+{
+	var authority = builder.Configuration["Authentication:Authority"]
+		?? throw new InvalidOperationException("Authentication:Authority is required in production.");
+	var audience = builder.Configuration["Authentication:Audience"]
+		?? throw new InvalidOperationException("Authentication:Audience is required in production.");
+	builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+		.AddJwtBearer(options =>
+		{
+			options.Authority = authority;
+			options.Audience = audience;
+			options.MapInboundClaims = false;
+			options.TokenValidationParameters = new TokenValidationParameters
+			{
+				NameClaimType = "name"
+			};
+		});
+}
 builder.Services.AddAuthorization();
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 if (builder.Environment.IsDevelopment())
