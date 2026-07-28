@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -54,6 +55,8 @@ public sealed class EasyAuthAuthenticationHandler(
         _ => type
     };
 
-    private sealed record EasAuthPrincipal(IReadOnlyList<EasyAuthClaim>? Claims);
-    private sealed record EasyAuthClaim(string Type, string Value);
+    private sealed record EasAuthPrincipal([property: JsonPropertyName("claims")] IReadOnlyList<EasyAuthClaim>? Claims);
+    private sealed record EasyAuthClaim(
+        [property: JsonPropertyName("typ")] string Type,
+        [property: JsonPropertyName("val")] string Value);
 }

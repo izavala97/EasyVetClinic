@@ -7,7 +7,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - Resource group: `EasyVetClinic-RG`.
 - API App Service: `EasyVetClinic-API` on Linux, deployed by [main_easyvetclinic-api.yml](.github/workflows/main_easyvetclinic-api.yml).
 - Static Web App: `EasyVetClinic-WebCli`, deployed by [azure-static-web-apps-red-plant-0ec64f60f.yml](.github/workflows/azure-static-web-apps-red-plant-0ec64f60f.yml).
-- Static Web App production domain: `https://red-plant-0ec64f60f.azurestaticapps.net`.
+- Static Web App production domain: `https://red-plant-0ec64f60f.7.azurestaticapps.net`.
 - API default domain: `https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net`.
 - The API defaults to SQLite through `Database__Provider=Sqlite`. Azure SQL support is installed but must not be enabled until SQL Server migrations have been generated and applied.
 
@@ -49,7 +49,8 @@ This checklist describes the Azure resources and configuration needed before pro
 - An Azure App Service plan and Linux App Service for the API.
 - Easy Auth enabled on the API App Service.
 - Microsoft Entra External ID selected as the identity provider.
-- API application registration configured as the allowed audience.
+- Configure the provider issuer URL as `https://134a684d-d19f-4215-bae2-e45dcb315751.ciamlogin.com/134a684d-d19f-4215-bae2-e45dcb315751/v2.0`. This is the canonical issuer returned by the External ID OpenID discovery document.
+- Configure both `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54` and `a0c84c31-b8c4-4d60-8e25-74ace0817d54` as allowed token audiences. The External ID delegated access token uses the raw API client ID in its `aud` claim.
 - Unauthenticated requests set to return HTTP 401.
 - HTTPS-only enabled and a custom domain/certificate configured if applicable.
 
@@ -76,7 +77,7 @@ This checklist describes the Azure resources and configuration needed before pro
 
 - Application Insights and Log Analytics workspace.
 - Alerts for availability, HTTP 5xx responses, authentication failures, SQL failures, and storage failures.
-- Set the API App Service setting `Cors__AllowedOrigins__0` to `https://red-plant-0ec64f60f.azurestaticapps.net`. Add custom production domains as additional numbered entries, such as `Cors__AllowedOrigins__1`.
+- Set the API App Service setting `Cors__AllowedOrigins__0` to `https://red-plant-0ec64f60f.7.azurestaticapps.net`. Add custom production domains as additional numbered entries, such as `Cors__AllowedOrigins__1`.
 - TLS and custom-domain configuration.
 - Optional private endpoints/VNet integration if clinic data policy requires private database and storage access.
 
