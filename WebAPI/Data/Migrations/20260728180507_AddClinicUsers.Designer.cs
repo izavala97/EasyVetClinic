@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EasyVetClinic.Api.Data.Migrations
 {
     [DbContext(typeof(ClinicDbContext))]
-    [Migration("20260728012419_AddSalesAndInventory")]
-    partial class AddSalesAndInventory
+    [Migration("20260728180507_AddClinicUsers")]
+    partial class AddClinicUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -58,9 +58,33 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LogoUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VeterinarianLicenseNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VeterinarianName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VeterinarianTitles")
+                        .IsRequired()
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -68,7 +92,7 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.ToTable("Clinics");
                 });
 
-            modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -77,7 +101,58 @@ namespace EasyVetClinic.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EntraObjectId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId", "EntraObjectId")
+                        .IsUnique();
+
+                    b.ToTable("ClinicUsers");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChiefComplaint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClinicalNotes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ClinicianName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Diagnosis")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Instructions")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -106,8 +181,32 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlternatePhone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ClinicId")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentityDocumentUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentityNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -148,9 +247,19 @@ namespace EasyVetClinic.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DistinguishingFeatures")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("GuardianId")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateOnly?>("LastVisit")
                         .HasColumnType("TEXT");
@@ -158,6 +267,10 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Sex")
@@ -179,6 +292,82 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.HasIndex("ClinicId", "Name");
 
                     b.ToTable("Patients");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.Prescription", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConsultationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DiagnosisSnapshot")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("FinalizedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Instructions")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsFinalized")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("LastUpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsultationId")
+                        .IsUnique();
+
+                    b.ToTable("Prescriptions");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.PrescriptionItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Concentration")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DosageDirections")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MedicationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrescriptionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Presentation")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrescriptionId", "SortOrder");
+
+                    b.ToTable("PrescriptionItems");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Product", b =>
@@ -277,6 +466,87 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.ToTable("SaleLines");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.VaccinationRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("AdministeredOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LotNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("NextDueOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PatientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VaccineName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VeterinarianName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ClinicId", "PatientId", "AdministeredOn");
+
+                    b.ToTable("VaccinationRecords");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.WeightRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("MeasuredOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PatientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ClinicId", "PatientId", "MeasuredOn");
+
+                    b.ToTable("WeightRecords");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Appointment", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
@@ -294,6 +564,17 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Clinic");
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicUser", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
+                        .WithMany("Users")
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
@@ -337,6 +618,28 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Guardian");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.Prescription", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Consultation", "Consultation")
+                        .WithOne("Prescription")
+                        .HasForeignKey("EasyVetClinic.Api.Data.Prescription", "ConsultationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Consultation");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.PrescriptionItem", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Prescription", "Prescription")
+                        .WithMany("Items")
+                        .HasForeignKey("PrescriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Prescription");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Product", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
@@ -377,6 +680,28 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Sale");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.VaccinationRecord", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
+                        .WithMany("VaccinationRecords")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.WeightRecord", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
+                        .WithMany("WeightRecords")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Clinic", b =>
                 {
                     b.Navigation("Appointments");
@@ -388,6 +713,13 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Products");
 
                     b.Navigation("Sales");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
+                {
+                    b.Navigation("Prescription");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Guardian", b =>
@@ -400,6 +732,15 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Appointments");
 
                     b.Navigation("Consultations");
+
+                    b.Navigation("VaccinationRecords");
+
+                    b.Navigation("WeightRecords");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.Prescription", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Sale", b =>

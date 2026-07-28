@@ -8,6 +8,7 @@ export type Dashboard = {
 
 export type Patient = {
   id: string
+  guardianId: string
   name: string
   species: string
   breed: string
@@ -18,12 +19,44 @@ export type Patient = {
   color: string
   allergies: string[]
   lastVisit: string
+  distinguishingFeatures: string
+  dateOfBirth: string | null
+  photoUrl: string
+  isActive: boolean
 }
 
 export type Guardian = {
   id: string
   name: string
   phone: string
+  alternatePhone: string
+  address: string
+  identityType: string
+  identityNumber: string
+  identityDocumentUrl: string
+}
+
+export type ClinicProfile = {
+  name: string
+  address: string
+  logoUrl: string
+  veterinarianName: string
+  veterinarianTitles: string
+  veterinarianLicenseNumber: string
+}
+
+export type ConsultationHistoryItem = {
+  id: string
+  startedAt: string
+  clinicianName: string
+  status: 'InProgress' | 'Completed'
+  diagnosis: string
+}
+
+export type ConsultationListItem = ConsultationHistoryItem & {
+  patientId: string
+  patientName: string
+  guardianName: string
 }
 
 export type Consultation = {
@@ -36,6 +69,19 @@ export type Consultation = {
   status: 'InProgress' | 'Completed'
   chiefComplaint: string
   clinicalNotes: string
+  diagnosis: string
+  instructions: string
+  prescriptionLastUpdatedAt: string | null
+  prescriptionItems: PrescriptionItem[]
+}
+
+export type PrescriptionItem = {
+  id?: string
+  medicationName: string
+  presentation: string
+  concentration: string
+  dosageDirections: string
+  sortOrder: number
 }
 
 export type ScheduleAppointment = {

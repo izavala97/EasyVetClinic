@@ -1,15 +1,50 @@
 using EasyVetClinic.Api.Data;
+using EasyVetClinic.Api.Authentication;
 using EasyVetClinic.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace EasyVetClinic.Api.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic currentClinic) : ControllerBase
 {
     private string ClinicId => currentClinic.Id;
+
+    [HttpGet("clinic")]
+    public async Task<ActionResult<ClinicProfile>> GetClinicProfile()
+    {
+        var clinic = await dbContext.Clinics.AsNoTracking().SingleOrDefaultAsync(candidate => candidate.Id == ClinicId);
+        return clinic is null ? NotFound() : Ok(MapClinicProfile(clinic));
+    }
+
+    [HttpPut("clinic")]
+    [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.SuperAdmin)]
+    public async Task<ActionResult<ClinicProfile>> UpdateClinicProfile(UpdateClinicProfileRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.VeterinarianName))
+        {
+            return ValidationProblem("Clinic and veterinarian names are required.");
+        }
+
+        var clinic = await dbContext.Clinics.SingleOrDefaultAsync(candidate => candidate.Id == ClinicId);
+        if (clinic is null)
+        {
+            return NotFound();
+        }
+
+        clinic.Name = request.Name.Trim();
+        clinic.Address = request.Address.Trim();
+        clinic.LogoUrl = request.LogoUrl.Trim();
+        clinic.VeterinarianName = request.VeterinarianName.Trim();
+        clinic.VeterinarianTitles = request.VeterinarianTitles.Trim();
+        clinic.VeterinarianLicenseNumber = request.VeterinarianLicenseNumber.Trim();
+        await dbContext.SaveChangesAsync();
+        return Ok(MapClinicProfile(clinic));
+    }
 
     [HttpGet("dashboard")]
     public async Task<ActionResult<DashboardSummary>> GetDashboard()
@@ -79,9 +114,8 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             .AsNoTracking()
             .Where(guardian => guardian.ClinicId == ClinicId)
             .OrderBy(guardian => guardian.Name)
-            .Select(guardian => new GuardianSummary(guardian.Id, guardian.Name, guardian.Phone))
             .ToListAsync();
-        return Ok(guardians);
+        return Ok(guardians.Select(MapGuardian).ToList());
     }
 
     [HttpPost("guardians")]
@@ -101,7 +135,41 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         };
         dbContext.Guardians.Add(guardian);
         await dbContext.SaveChangesAsync();
-        return Created($"api/guardians/{guardian.Id}", new GuardianSummary(guardian.Id, guardian.Name, guardian.Phone));
+        return Created($"api/guardians/{guardian.Id}", MapGuardian(guardian));
+    }
+
+    [HttpGet("guardians/{guardianId}")]
+    public async Task<ActionResult<GuardianSummary>> GetGuardian(string guardianId)
+    {
+        var guardian = await dbContext.Guardians.AsNoTracking()
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == guardianId);
+        return guardian is null ? NotFound() : Ok(MapGuardian(guardian));
+    }
+
+    [HttpPut("guardians/{guardianId}")]
+    public async Task<ActionResult<GuardianSummary>> UpdateGuardian(string guardianId, UpdateGuardianRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Phone))
+        {
+            return ValidationProblem("Guardian name and phone are required.");
+        }
+
+        var guardian = await dbContext.Guardians
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == guardianId);
+        if (guardian is null)
+        {
+            return NotFound();
+        }
+
+        guardian.Name = request.Name.Trim();
+        guardian.Phone = request.Phone.Trim();
+        guardian.AlternatePhone = request.AlternatePhone.Trim();
+        guardian.Address = request.Address.Trim();
+        guardian.IdentityType = request.IdentityType.Trim();
+        guardian.IdentityNumber = request.IdentityNumber.Trim();
+        guardian.IdentityDocumentUrl = request.IdentityDocumentUrl.Trim();
+        await dbContext.SaveChangesAsync();
+        return Ok(MapGuardian(guardian));
     }
 
     [HttpPost("patients")]
@@ -136,6 +204,167 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         dbContext.Patients.Add(patient);
         await dbContext.SaveChangesAsync();
         return Created($"api/patients/{patient.Id}", MapPatient(patient));
+    }
+
+    [HttpPut("patients/{patientId}")]
+    public async Task<ActionResult<PatientSummary>> UpdatePatient(string patientId, UpdatePatientRequest request)
+    {
+        if (new[] { request.Name, request.Species, request.Breed, request.Sex, request.Weight, request.Color }.Any(string.IsNullOrWhiteSpace))
+        {
+            return ValidationProblem("Name, species, breed, sex, weight, and color are required.");
+        }
+
+        var patient = await dbContext.Patients.Include(candidate => candidate.Guardian)
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
+        if (patient is null)
+        {
+            return NotFound();
+        }
+
+        patient.Name = request.Name.Trim();
+        patient.Species = request.Species.Trim();
+        patient.Breed = request.Breed.Trim();
+        patient.Sex = request.Sex.Trim();
+        patient.Weight = request.Weight.Trim();
+        patient.Color = request.Color.Trim();
+        patient.Allergies = request.Allergies.Trim();
+        patient.DistinguishingFeatures = request.DistinguishingFeatures.Trim();
+        patient.DateOfBirth = request.DateOfBirth;
+        patient.PhotoUrl = request.PhotoUrl.Trim();
+        patient.IsActive = request.IsActive;
+        await dbContext.SaveChangesAsync();
+        return Ok(MapPatient(patient));
+    }
+
+    [HttpGet("patients/{patientId}/weights")]
+    public async Task<ActionResult<IReadOnlyList<WeightRecordSummary>>> GetWeightRecords(string patientId)
+    {
+        var records = await dbContext.WeightRecords
+            .AsNoTracking()
+            .Where(record => record.ClinicId == ClinicId && record.PatientId == patientId)
+            .OrderByDescending(record => record.MeasuredOn)
+            .Select(record => new WeightRecordSummary(record.Id, record.Value, record.Unit, record.MeasuredOn, record.RecordedBy))
+            .ToListAsync();
+        return Ok(records);
+    }
+
+    [HttpPost("patients/{patientId}/weights")]
+    [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
+    public async Task<ActionResult<WeightRecordSummary>> CreateWeightRecord(string patientId, CreateWeightRecordRequest request)
+    {
+        if (request.Value <= 0 || string.IsNullOrWhiteSpace(request.Unit) || string.IsNullOrWhiteSpace(request.RecordedBy))
+        {
+            return ValidationProblem("A positive weight, unit, and recorded-by value are required.");
+        }
+
+        var patient = await dbContext.Patients.SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
+        if (patient is null)
+        {
+            return NotFound();
+        }
+
+        var record = new WeightRecord
+        {
+            Id = Guid.NewGuid().ToString(),
+            ClinicId = ClinicId,
+            PatientId = patient.Id,
+            Value = request.Value,
+            Unit = request.Unit.Trim(),
+            MeasuredOn = request.MeasuredOn,
+            RecordedBy = request.RecordedBy.Trim()
+        };
+        patient.Weight = $"{record.Value:0.##} {record.Unit}";
+        dbContext.WeightRecords.Add(record);
+        await dbContext.SaveChangesAsync();
+        return Created($"api/patients/{patient.Id}/weights/{record.Id}", new WeightRecordSummary(record.Id, record.Value, record.Unit, record.MeasuredOn, record.RecordedBy));
+    }
+
+    [HttpGet("patients/{patientId}/vaccinations")]
+    public async Task<ActionResult<IReadOnlyList<VaccinationRecordSummary>>> GetVaccinationRecords(string patientId)
+    {
+        var records = await dbContext.VaccinationRecords
+            .AsNoTracking()
+            .Where(record => record.ClinicId == ClinicId && record.PatientId == patientId)
+            .OrderByDescending(record => record.AdministeredOn)
+            .Select(record => new VaccinationRecordSummary(record.Id, record.VaccineName, record.AdministeredOn, record.NextDueOn, record.LotNumber, record.VeterinarianName))
+            .ToListAsync();
+        return Ok(records);
+    }
+
+    [HttpPost("patients/{patientId}/vaccinations")]
+    [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
+    public async Task<ActionResult<VaccinationRecordSummary>> CreateVaccinationRecord(string patientId, CreateVaccinationRecordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.VaccineName) || string.IsNullOrWhiteSpace(request.VeterinarianName))
+        {
+            return ValidationProblem("Vaccine name and veterinarian name are required.");
+        }
+
+        if (!await dbContext.Patients.AnyAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId))
+        {
+            return NotFound();
+        }
+
+        var record = new VaccinationRecord
+        {
+            Id = Guid.NewGuid().ToString(),
+            ClinicId = ClinicId,
+            PatientId = patientId,
+            VaccineName = request.VaccineName.Trim(),
+            AdministeredOn = request.AdministeredOn,
+            NextDueOn = request.NextDueOn,
+            LotNumber = request.LotNumber.Trim(),
+            VeterinarianName = request.VeterinarianName.Trim()
+        };
+        dbContext.VaccinationRecords.Add(record);
+        await dbContext.SaveChangesAsync();
+        return Created($"api/patients/{patientId}/vaccinations/{record.Id}", new VaccinationRecordSummary(record.Id, record.VaccineName, record.AdministeredOn, record.NextDueOn, record.LotNumber, record.VeterinarianName));
+    }
+
+    [HttpGet("patients/{patientId}/consultations")]
+    public async Task<ActionResult<IReadOnlyList<ConsultationHistoryItem>>> GetConsultationHistory(string patientId)
+    {
+        var records = await dbContext.Consultations
+            .AsNoTracking()
+            .Where(consultation => consultation.ClinicId == ClinicId && consultation.PatientId == patientId)
+            .Select(consultation => new ConsultationHistoryItem(consultation.Id, consultation.StartedAt, consultation.ClinicianName, consultation.Status, consultation.Diagnosis))
+            .ToListAsync();
+        return Ok(records.OrderByDescending(consultation => consultation.StartedAt).ToList());
+    }
+
+    [HttpGet("consultations")]
+    public async Task<ActionResult<IReadOnlyList<ConsultationListItem>>> GetConsultations([FromQuery] string? query, [FromQuery] string? status)
+    {
+        var consultations = dbContext.Consultations
+            .AsNoTracking()
+            .Include(consultation => consultation.Patient)
+            .ThenInclude(patient => patient.Guardian)
+            .Where(consultation => consultation.ClinicId == ClinicId);
+
+        if (!string.IsNullOrWhiteSpace(status) && status is "InProgress" or "Completed")
+        {
+            consultations = consultations.Where(consultation => consultation.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            consultations = consultations.Where(consultation =>
+                consultation.Patient.Name.Contains(query) ||
+                consultation.Patient.Guardian.Name.Contains(query) ||
+                consultation.ClinicianName.Contains(query) ||
+                consultation.Diagnosis.Contains(query));
+        }
+
+        var records = await consultations.ToListAsync();
+        return Ok(records.OrderByDescending(consultation => consultation.StartedAt).Select(consultation => new ConsultationListItem(
+            consultation.Id,
+            consultation.PatientId,
+            consultation.Patient.Name,
+            consultation.Patient.Guardian.Name,
+            consultation.ClinicianName,
+            consultation.StartedAt,
+            consultation.Status,
+            consultation.Diagnosis)).ToList());
     }
 
     [HttpGet("appointments")]
@@ -261,6 +490,7 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
     }
 
     [HttpPost("patients/{patientId}/consultations")]
+    [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
     public async Task<ActionResult<ConsultationSummary>> StartConsultation(string patientId, StartConsultationRequest request)
     {
         var patient = await dbContext.Patients
@@ -292,11 +522,14 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             .AsNoTracking()
             .Include(candidate => candidate.Patient)
             .ThenInclude(patient => patient.Guardian)
+            .Include(candidate => candidate.Prescription)
+            .ThenInclude(prescription => prescription!.Items)
             .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == consultationId);
         return consultation is null ? NotFound() : Ok(MapConsultation(consultation));
     }
 
     [HttpPut("consultations/{consultationId}")]
+    [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
     public async Task<ActionResult<ConsultationDetail>> UpdateConsultation(string consultationId, UpdateConsultationRequest request)
     {
         if (request.Status is not ("InProgress" or "Completed"))
@@ -307,6 +540,8 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         var consultation = await dbContext.Consultations
             .Include(candidate => candidate.Patient)
             .ThenInclude(patient => patient.Guardian)
+            .Include(candidate => candidate.Prescription)
+            .ThenInclude(prescription => prescription!.Items)
             .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == consultationId);
         if (consultation is null)
         {
@@ -315,7 +550,47 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
 
         consultation.ChiefComplaint = request.ChiefComplaint.Trim();
         consultation.ClinicalNotes = request.ClinicalNotes.Trim();
+        consultation.Diagnosis = request.Diagnosis.Trim();
+        consultation.Instructions = request.Instructions.Trim();
         consultation.Status = request.Status;
+        var prescription = consultation.Prescription;
+        if (prescription is null)
+        {
+            prescription = new Prescription
+            {
+                Id = Guid.NewGuid().ToString(),
+                ClinicId = ClinicId,
+                ConsultationId = consultation.Id
+            };
+            consultation.Prescription = prescription;
+        }
+
+        dbContext.PrescriptionItems.RemoveRange(prescription.Items);
+        prescription.Items.Clear();
+        foreach (var item in request.PrescriptionItems.OrderBy(item => item.SortOrder))
+        {
+            if (string.IsNullOrWhiteSpace(item.MedicationName) || string.IsNullOrWhiteSpace(item.Presentation) || string.IsNullOrWhiteSpace(item.DosageDirections))
+            {
+                return ValidationProblem("Each prescription item requires medication, presentation, and dosage directions.");
+            }
+
+            prescription.Items.Add(new PrescriptionItem
+            {
+                Id = Guid.NewGuid().ToString(),
+                MedicationName = item.MedicationName.Trim(),
+                Presentation = item.Presentation.Trim(),
+                Concentration = item.Concentration.Trim(),
+                DosageDirections = item.DosageDirections.Trim(),
+                SortOrder = item.SortOrder
+            });
+        }
+
+        prescription.DiagnosisSnapshot = consultation.Diagnosis;
+        prescription.Instructions = consultation.Instructions;
+        var isCompleting = request.Status == "Completed" && !prescription.IsFinalized;
+        prescription.IsFinalized = request.Status == "Completed";
+        prescription.FinalizedAt = isCompleting ? DateTimeOffset.UtcNow : prescription.FinalizedAt;
+        prescription.LastUpdatedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync();
         return Ok(MapConsultation(consultation));
     }
@@ -358,6 +633,7 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
 
     private static PatientSummary MapPatient(Patient patient) => new(
         patient.Id,
+        patient.GuardianId,
         patient.Name,
         patient.Species,
         patient.Breed,
@@ -367,7 +643,29 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         patient.Guardian.Phone,
         patient.Color,
         patient.Allergies.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-        patient.LastVisit?.ToString("yyyy-MM-dd") ?? string.Empty);
+        patient.LastVisit?.ToString("yyyy-MM-dd") ?? string.Empty,
+        patient.DistinguishingFeatures,
+        patient.DateOfBirth,
+        patient.PhotoUrl,
+        patient.IsActive);
+
+    private static GuardianSummary MapGuardian(Guardian guardian) => new(
+        guardian.Id,
+        guardian.Name,
+        guardian.Phone,
+        guardian.AlternatePhone,
+        guardian.Address,
+        guardian.IdentityType,
+        guardian.IdentityNumber,
+        guardian.IdentityDocumentUrl);
+
+    private static ClinicProfile MapClinicProfile(Clinic clinic) => new(
+        clinic.Name,
+        clinic.Address,
+        clinic.LogoUrl,
+        clinic.VeterinarianName,
+        clinic.VeterinarianTitles,
+        clinic.VeterinarianLicenseNumber);
 
     private static ScheduleAppointment MapAppointment(Appointment appointment) =>
         MapAppointment(appointment, appointment.Patient.Name);
@@ -389,5 +687,12 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         consultation.StartedAt,
         consultation.Status,
         consultation.ChiefComplaint,
-        consultation.ClinicalNotes);
+        consultation.ClinicalNotes,
+        consultation.Diagnosis,
+        consultation.Instructions,
+        consultation.Prescription?.LastUpdatedAt,
+        consultation.Prescription?.Items
+            .OrderBy(item => item.SortOrder)
+            .Select(item => new PrescriptionItemSummary(item.Id, item.MedicationName, item.Presentation, item.Concentration, item.DosageDirections, item.SortOrder))
+            .ToList() ?? []);
 }

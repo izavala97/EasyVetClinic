@@ -18,7 +18,7 @@ All repository documentation and technical artifacts are written in English. Sou
 
 ## Current Implementation
 
-The current vertical slice includes an Alito's Vet operational dashboard, appointment summary, patient search, consultation creation, and document draft preparation for health certificates, surgical consent, and boarding contracts. Development data is persisted in a local SQLite database through EF Core migrations.
+The current vertical slice includes an operational dashboard, patient search, consultation creation, and document draft preparation for health certificates, surgical consent, and boarding contracts. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
 
 Upcoming work includes Azure SQL production persistence, EasyAuth/External ID authentication, claim-based tenant resolution, authorization roles, signed PDF generation, private file storage, and complete operational modules.
 
@@ -32,11 +32,13 @@ Run one command from the repository root:
 
 The script starts the API at `http://localhost:5120` and the client at `http://localhost:5173`. When the API starts in the Development environment, it automatically applies the EF Core migrations and creates `WebAPI/easyvetclinic.db` if it does not exist.
 
-To discard local data and create a clean development database with the sample records:
+To discard local data and create an empty development database:
 
 ```powershell
 .\scripts\start-dev.ps1 -ResetDatabase
 ```
+
+An empty database requires an initial clinic and authenticated clinic-user membership to be provisioned before protected operational endpoints can be used. Production provisioning is described in [DEPLOYMENT.MD](DEPLOYMENT.MD).
 
 The SQLite database and its companion files are ignored by Git. Use the `ClinicDatabase` connection string in [WebAPI/appsettings.json](WebAPI/appsettings.json) to point the application to a different local SQLite file.
 

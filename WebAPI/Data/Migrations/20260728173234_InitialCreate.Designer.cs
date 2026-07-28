@@ -3,6 +3,7 @@ using System;
 using EasyVetClinic.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EasyVetClinic.Api.Data.Migrations
 {
     [DbContext(typeof(ClinicDbContext))]
-    partial class ClinicDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260728173234_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -87,41 +90,6 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Clinics");
-                });
-
-            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicUser", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ClinicId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EntraObjectId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClinicId", "EntraObjectId")
-                        .IsUnique();
-
-                    b.ToTable("ClinicUsers");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
@@ -563,17 +531,6 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicUser", b =>
-                {
-                    b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
-                        .WithMany("Users")
-                        .HasForeignKey("ClinicId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Clinic");
-                });
-
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
@@ -710,8 +667,6 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Navigation("Products");
 
                     b.Navigation("Sales");
-
-                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>

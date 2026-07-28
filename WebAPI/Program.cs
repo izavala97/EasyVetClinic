@@ -1,4 +1,6 @@
 using EasyVetClinic.Api.Data;
+using EasyVetClinic.Api.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,7 +8,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ClinicDbContext>(options =>
 	options.UseSqlite(builder.Configuration.GetConnectionString("ClinicDatabase")));
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentClinic>();
+var authenticationScheme = builder.Environment.IsDevelopment()
+	? DevelopmentAuthenticationHandler.SchemeName
+	: EasyAuthAuthenticationHandler.SchemeName;
+builder.Services.AddAuthentication(authenticationScheme)
+	.AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>(DevelopmentAuthenticationHandler.SchemeName, _ => { })
+	.AddScheme<AuthenticationSchemeOptions, EasyAuthAuthenticationHandler>(EasyAuthAuthenticationHandler.SchemeName, _ => { });
+builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
 	options.AddDefaultPolicy(policy => policy
@@ -17,16 +27,29 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+	try
+	{
+		await next(context);
+	}
+	catch (ClinicAccessException)
+	{
+		context.Response.StatusCode = StatusCodes.Status403Forbidden;
+		await context.Response.WriteAsJsonAsync(new { error = "Clinic access is not permitted." });
+	}
+});
+
 if (app.Environment.IsDevelopment())
 {
 	using var scope = app.Services.CreateScope();
 	var dbContext = scope.ServiceProvider.GetRequiredService<ClinicDbContext>();
 	await dbContext.Database.MigrateAsync();
-	await ClinicDatabaseInitializer.SeedDevelopmentDataAsync(dbContext);
 }
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

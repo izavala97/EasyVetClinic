@@ -9,7 +9,10 @@ import { PatientDetailPage } from './pages/PatientDetailPage.tsx'
 import { PatientsPage } from './pages/PatientsPage.tsx'
 import { PointOfSalePage } from './pages/PointOfSalePage.tsx'
 import { ConsultationPage } from './pages/ConsultationPage.tsx'
+import { ConsultationsPage } from './pages/ConsultationsPage.tsx'
+import { ClinicProfilePage } from './pages/ClinicProfilePage.tsx'
 import { RegistrationPage } from './pages/RegistrationPage.tsx'
+import { PrescriptionPage } from './pages/PrescriptionPage.tsx'
 import { SchedulePage } from './pages/SchedulePage.tsx'
 
 createRoot(document.getElementById('root')!).render(
@@ -23,9 +26,12 @@ createRoot(document.getElementById('root')!).render(
           <Route path="patients/:patientId" element={<PatientDetailPage />} />
           <Route path="guardians/new" element={<RegistrationPage mode="guardian" />} />
           <Route path="consultations/:consultationId" element={<ConsultationPage />} />
+          <Route path="consultations/:consultationId/prescription" element={<PrescriptionPage />} />
+          <Route path="consultations" element={<ConsultationsPage />} />
           <Route path="schedule" element={<SchedulePage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="point-of-sale" element={<PointOfSalePage />} />
+          <Route path="clinic-profile" element={<ClinicProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   CalendarDays,
+  ClipboardList,
+  Settings,
   FileText,
   LayoutDashboard,
   PawPrint,
@@ -16,9 +18,11 @@ function App() {
         <nav aria-label="Primary navigation">
           <NavLink end to="/"><LayoutDashboard size={18} /> Dashboard</NavLink>
           <NavLink to="/patients"><PawPrint size={18} /> Patients</NavLink>
+          <NavLink to="/consultations"><ClipboardList size={18} /> Consultations</NavLink>
           <NavLink to="/schedule"><CalendarDays size={18} /> Schedule</NavLink>
           <NavLink to="/documents"><FileText size={18} /> Documents</NavLink>
           <NavLink to="/point-of-sale"><ShoppingBag size={18} /> Point of sale</NavLink>
+          <NavLink to="/clinic-profile"><Settings size={18} /> Clinic profile</NavLink>
         </nav>
         <div className="sidebar-footer"><span className="avatar">AL</span><div><strong>Alondra Licona</strong><small>MVZ. Dipl.</small></div></div>
       </aside>

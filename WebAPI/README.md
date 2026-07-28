@@ -20,9 +20,9 @@ The API listens at `http://localhost:5120` in the HTTP development profile.
 
 ## Local Database
 
-The Development environment uses SQLite. On application startup, EF Core applies pending migrations and creates `easyvetclinic.db` in the `WebAPI` directory. The development database is seeded only when the `Clinics` table is empty.
+The Development environment uses SQLite. On application startup, EF Core applies pending migrations and creates `easyvetclinic.db` in the `WebAPI` directory. No sample clinic, user, patient, guardian, appointment, consultation, inventory, or sale data is seeded.
 
-To reset it, stop the API and run this command from the repository root:
+To reset it to an empty schema, stop the API and run this command from the repository root:
 
 ```powershell
 .\scripts\start-dev.ps1 -ResetDatabase

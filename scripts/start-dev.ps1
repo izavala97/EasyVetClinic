@@ -15,6 +15,34 @@ function Test-PortInUse {
     return $null -ne (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
 }
 
+function Wait-ForApi {
+    param(
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if ($Process.HasExited) {
+            throw "The API exited with code $($Process.ExitCode) before it became ready."
+        }
+
+        try {
+            $response = Invoke-WebRequest -UseBasicParsing 'http://localhost:5120/health' -TimeoutSec 1
+            if ($response.StatusCode -eq 200) {
+                return
+            }
+        }
+        catch {
+            # The API is still building, migrating, or starting.
+        }
+
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw 'The API did not become ready at http://localhost:5120/health within 30 seconds.'
+}
+
 if (Test-PortInUse -Port 5120) {
     throw 'Port 5120 is already in use. Stop the existing API process before starting the development environment.'
 }
@@ -43,6 +71,8 @@ Write-Host 'Starting API at http://localhost:5120...'
 $apiProcess = Start-Process -FilePath 'dotnet' -ArgumentList @('run', '--launch-profile', 'http') -WorkingDirectory $apiDirectory -PassThru
 
 try {
+    Write-Host 'Waiting for API readiness...'
+    Wait-ForApi -Process $apiProcess
     Write-Host 'Starting client at http://localhost:5173...'
     Push-Location $clientDirectory
     try {
