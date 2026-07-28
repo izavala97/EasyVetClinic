@@ -5,8 +5,9 @@ import { type CurrentUser, getJson, setAccessTokenProvider } from './api'
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID
-const authority = import.meta.env.VITE_ENTRA_AUTHORITY
+const authorityHost = import.meta.env.VITE_ENTRA_AUTHORITY?.replace(/\/+$/, '')
 const apiScope = import.meta.env.VITE_ENTRA_API_SCOPE
+const authority = authorityHost && tenantId ? `${authorityHost}/${tenantId}` : undefined
 
 const msalInstance = tenantId && clientId && authority && apiScope
   ? new PublicClientApplication({
