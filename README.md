@@ -20,7 +20,7 @@ All repository documentation and technical artifacts are written in English. Sou
 
 The current vertical slice includes an operational dashboard, patient search, consultation creation, and document draft preparation for health certificates, surgical consent, and boarding contracts. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
 
-Upcoming work includes Azure SQL production persistence, EasyAuth/External ID authentication, claim-based tenant resolution, authorization roles, signed PDF generation, private file storage, and complete operational modules.
+The Azure App Service API and Azure Static Web App deployment resources are configured through GitHub Actions. Azure SQL production persistence, External ID/Easy Auth configuration, signed PDF generation, private file storage, and complete operational modules remain before production go-live. See [DEPLOYMENT.MD](DEPLOYMENT.MD) for the Azure configuration checklist.
 
 ## Run Locally
 

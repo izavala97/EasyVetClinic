@@ -2,6 +2,22 @@
 
 This checklist describes the Azure resources and configuration needed before production deployment. Do not place secrets in this repository.
 
+## Current deployment baseline
+
+- Resource group: `EasyVetClinic-RG`.
+- API App Service: `EasyVetClinic-API` on Linux, deployed by [main_easyvetclinic-api.yml](.github/workflows/main_easyvetclinic-api.yml).
+- Static Web App: `EasyVetClinic-WebCli`, deployed by [azure-static-web-apps-red-plant-0ec64f60f.yml](.github/workflows/azure-static-web-apps-red-plant-0ec64f60f.yml).
+- Static Web App production domain: `https://red-plant-0ec64f60f.azurestaticapps.net`.
+- API default domain: `https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net`.
+- The API is currently built for local SQLite. Do not configure an Azure SQL connection string until the application has been migrated to the SQL Server EF Core provider and SQL Server migrations have been generated.
+
+## GitHub Actions configuration
+
+- Add the repository Actions variable `VITE_API_BASE_URL` with the API default domain above, without a trailing slash. This is intentionally a variable, not a secret: Vite embeds it in the browser bundle.
+- The Static Web App deployment token is already stored as the GitHub secret created by Azure. Do not copy or commit that token.
+- The API workflow uses the OpenID Connect credentials created by Azure. Do not rename or delete the `AZUREAPPSERVICE_*` GitHub secrets unless the federated credential is replaced at the same time.
+- Pushes to `main` deploy both apps. Check the GitHub Actions runs after each deployment.
+
 ## 1. Azure subscription and naming
 
 - Azure subscription and resource group.
@@ -51,13 +67,14 @@ This checklist describes the Azure resources and configuration needed before pro
 
 - Application Insights and Log Analytics workspace.
 - Alerts for availability, HTTP 5xx responses, authentication failures, SQL failures, and storage failures.
-- Production CORS origin restricted to the SPA domain.
+- Set the API App Service setting `Cors__AllowedOrigins__0` to `https://red-plant-0ec64f60f.azurestaticapps.net`. Add custom production domains as additional numbered entries, such as `Cors__AllowedOrigins__1`.
 - TLS and custom-domain configuration.
 - Optional private endpoints/VNet integration if clinic data policy requires private database and storage access.
 
 ## 7. Application configuration to supply as App Service settings
 
-- `ConnectionStrings__ClinicDatabase` for Azure SQL.
+- `Cors__AllowedOrigins__0` for the Static Web App production domain.
+- `ConnectionStrings__ClinicDatabase` for Azure SQL only after SQL Server provider support and migrations are implemented.
 - `Authentication__EasyAuth__ExpectedAudience` when token audience validation is added.
 - Storage account/container settings.
 - Application Insights connection string.
@@ -73,6 +90,7 @@ This checklist describes the Azure resources and configuration needed before pro
 
 ## Before Go-Live
 
+- Confirm `GET https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net/health` returns HTTP 200 after an API deployment.
 - Run database migrations in the release pipeline.
 - Verify cross-clinic access is denied with integration tests.
 - Confirm authenticated requests succeed and unauthenticated requests return HTTP 401.
