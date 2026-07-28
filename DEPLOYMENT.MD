@@ -9,7 +9,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - Static Web App: `EasyVetClinic-WebCli`, deployed by [azure-static-web-apps-red-plant-0ec64f60f.yml](.github/workflows/azure-static-web-apps-red-plant-0ec64f60f.yml).
 - Static Web App production domain: `https://red-plant-0ec64f60f.7.azurestaticapps.net`.
 - API default domain: `https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net`.
-- The API defaults to SQLite through `Database__Provider=Sqlite`. Azure SQL support is installed but must not be enabled until SQL Server migrations have been generated and applied.
+- Local development defaults to SQLite. Production uses the existing Azure SQL database after its initial migration script has been applied.
 
 ## GitHub Actions configuration
 
@@ -44,26 +44,29 @@ This checklist describes the Azure resources and configuration needed before pro
 - Configured values: tenant ID `134a684d-d19f-4215-bae2-e45dcb315751`; SPA client ID `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`; API client ID `a0c84c31-b8c4-4d60-8e25-74ace0817d54`; API scope `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`.
 - The `EasyVetClinicSignUpSignIn` flow uses email/password with display name and email address.
 
-## 3. App Service Easy Auth
+## 3. API bearer-token validation
 
 - An Azure App Service plan and Linux App Service for the API.
-- Easy Auth enabled on the API App Service.
-- Microsoft Entra External ID selected as the identity provider.
-- Configure the provider issuer URL as `https://134a684d-d19f-4215-bae2-e45dcb315751.ciamlogin.com/134a684d-d19f-4215-bae2-e45dcb315751/v2.0`. This is the canonical issuer returned by the External ID OpenID discovery document.
-- Configure both `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54` and `a0c84c31-b8c4-4d60-8e25-74ace0817d54` as allowed token audiences. The External ID delegated access token uses the raw API client ID in its `aud` claim.
-- Unauthenticated requests set to return HTTP 401.
+- App Service Authentication is disabled. The API validates bearer tokens itself through ASP.NET Core JWT bearer authentication.
+- The API validates issuer `https://134a684d-d19f-4215-bae2-e45dcb315751.ciamlogin.com/134a684d-d19f-4215-bae2-e45dcb315751/v2.0` and audience `a0c84c31-b8c4-4d60-8e25-74ace0817d54`.
 - HTTPS-only enabled and a custom domain/certificate configured if applicable.
 
 ## 4. Azure SQL Database
 
-- Azure SQL logical server and database.
+- Existing Azure SQL logical server: `easyvetclinic-dbserver.database.windows.net`.
+- Existing database: `easyvetclinic-database` in Canada Central.
 - Microsoft Entra-only authentication enabled.
 - An Entra administrator for the SQL server.
 - An App Service system-assigned managed identity.
 - A contained database user for the App Service managed identity with required application permissions.
+- SQL networking that permits the App Service connection: use private networking for production, or temporarily enable the server's "Allow Azure services and resources to access this server" firewall option while private networking is not configured.
 - Production backup retention, geo-redundancy, and sizing decisions.
 - A deployment migration process that runs before the application release, not at API startup.
-- When SQL Server migrations are ready, set `Database__Provider=SqlServer` and `ConnectionStrings__ClinicDatabase` together in the API App Service. Do not set only one of these values.
+- Apply [scripts/Apply-SqlServerMigrations.sql](scripts/Apply-SqlServerMigrations.sql) once through Azure Portal Query Editor or a controlled release connection before enabling the SQL Server provider. The script is idempotent and records its migration in `__EFMigrationsHistory`.
+- Create the managed identity database user as the SQL Entra administrator, then grant `db_datareader` and `db_datawriter` to that user. The application does not need schema-change permissions at runtime.
+- Set these App Service settings together after the migration succeeds:
+	- `Database__Provider=SqlServer`
+	- `ConnectionStrings__ClinicDatabase=Server=tcp:easyvetclinic-dbserver.database.windows.net,1433;Initial Catalog=easyvetclinic-database;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;`
 
 ## 5. Storage and secrets
 
@@ -84,8 +87,7 @@ This checklist describes the Azure resources and configuration needed before pro
 ## 7. Application configuration to supply as App Service settings
 
 - `Cors__AllowedOrigins__0` for the Static Web App production domain.
-- `ConnectionStrings__ClinicDatabase` for Azure SQL only after SQL Server provider support and migrations are implemented.
-- `Authentication__EasyAuth__ExpectedAudience` when token audience validation is added.
+- `Database__Provider=SqlServer` and `ConnectionStrings__ClinicDatabase` after the Azure SQL migration is applied.
 - Storage account/container settings.
 - Application Insights connection string.
 - Allowed SPA origin.
@@ -93,7 +95,7 @@ This checklist describes the Azure resources and configuration needed before pro
 ## 8. Initial access setup
 
 - The first authenticated External ID user creates the initial clinic through `POST /api/onboarding/clinic`; that operation creates an active `ClinicAdmin` membership and is rejected once any clinic exists.
-- The onboarding request requires the App Service Easy Auth principal and is never available anonymously.
+- The onboarding request requires a valid External ID bearer token and is never available anonymously.
 - `GET /api/me` returns the authenticated user and current membership context for the frontend shell. A user without a membership receives identity context with no clinic values and can be routed to initial onboarding after browser sign-in is implemented.
 - Create the super administrator Entra user and map their Entra object ID to the `SuperAdmin` role when platform-level administration is introduced.
 - Create each clinic and map clinic administrators, veterinarians, and staff through `ClinicUsers`.

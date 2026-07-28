@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EasyVetClinic.Api.Data;
 
-public sealed class ClinicDbContext(DbContextOptions<ClinicDbContext> options) : DbContext(options)
+public class ClinicDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<Clinic> Clinics => Set<Clinic>();
     public DbSet<ClinicUser> ClinicUsers => Set<ClinicUser>();
@@ -59,14 +59,14 @@ public sealed class ClinicDbContext(DbContextOptions<ClinicDbContext> options) :
             entity.Property(patient => patient.Name).HasMaxLength(200).IsRequired();
             entity.HasIndex(patient => new { patient.ClinicId, patient.Name });
             entity.HasOne(patient => patient.Clinic).WithMany(clinic => clinic.Patients).HasForeignKey(patient => patient.ClinicId);
-            entity.HasOne(patient => patient.Guardian).WithMany(guardian => guardian.Patients).HasForeignKey(patient => patient.GuardianId);
+            entity.HasOne(patient => patient.Guardian).WithMany(guardian => guardian.Patients).HasForeignKey(patient => patient.GuardianId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Appointment>(entity =>
         {
             entity.HasKey(appointment => appointment.Id);
             entity.HasIndex(appointment => new { appointment.ClinicId, appointment.StartsAt });
-            entity.HasOne(appointment => appointment.Clinic).WithMany(clinic => clinic.Appointments).HasForeignKey(appointment => appointment.ClinicId);
+            entity.HasOne(appointment => appointment.Clinic).WithMany(clinic => clinic.Appointments).HasForeignKey(appointment => appointment.ClinicId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(appointment => appointment.Patient).WithMany(patient => patient.Appointments).HasForeignKey(appointment => appointment.PatientId);
         });
 
@@ -127,7 +127,7 @@ public sealed class ClinicDbContext(DbContextOptions<ClinicDbContext> options) :
             entity.HasKey(sale => sale.Id);
             entity.Property(sale => sale.PaymentMethod).HasMaxLength(50).IsRequired();
             entity.HasIndex(sale => new { sale.ClinicId, sale.CompletedAt });
-            entity.HasOne(sale => sale.Clinic).WithMany(clinic => clinic.Sales).HasForeignKey(sale => sale.ClinicId);
+            entity.HasOne(sale => sale.Clinic).WithMany(clinic => clinic.Sales).HasForeignKey(sale => sale.ClinicId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(sale => sale.Patient).WithMany().HasForeignKey(sale => sale.PatientId).OnDelete(DeleteBehavior.SetNull);
         });
 
