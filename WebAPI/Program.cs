@@ -17,10 +17,15 @@ builder.Services.AddAuthentication(authenticationScheme)
 	.AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>(DevelopmentAuthenticationHandler.SchemeName, _ => { })
 	.AddScheme<AuthenticationSchemeOptions, EasyAuthAuthenticationHandler>(EasyAuthAuthenticationHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (builder.Environment.IsDevelopment())
+{
+	allowedOrigins = [.. allowedOrigins, "http://localhost:5173"];
+}
 builder.Services.AddCors(options =>
 {
 	options.AddDefaultPolicy(policy => policy
-		.WithOrigins("http://localhost:5173")
+		.WithOrigins(allowedOrigins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
 		.AllowAnyHeader()
 		.AllowAnyMethod());
 });

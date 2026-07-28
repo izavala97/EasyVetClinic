@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, PawPrint, UserRoundPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { type Guardian, type Patient, getJson } from '../api'
+import { apiFetch, type Guardian, type Patient, getJson } from '../api'
 
 type RegistrationMode = 'guardian' | 'patient'
 
@@ -33,13 +33,13 @@ export function RegistrationPage({ mode }: { mode: RegistrationMode }) {
     setError('')
     try {
       if (mode === 'guardian') {
-        const response = await fetch('/api/guardians', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, phone }) })
+        const response = await apiFetch('/api/guardians', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, phone }) })
         if (!response.ok) throw new Error()
         navigate('/patients/new')
         return
       }
 
-      const response = await fetch('/api/patients', {
+      const response = await apiFetch('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guardianId, name, species, breed, sex, weight, color, allergies }),

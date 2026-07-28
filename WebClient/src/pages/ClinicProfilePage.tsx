@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Building2, Save } from 'lucide-react'
-import { type ClinicProfile, getJson } from '../api'
+import { apiFetch, type ClinicProfile, getJson } from '../api'
 
 export function ClinicProfilePage() {
   const [profile, setProfile] = useState<ClinicProfile | null>(null)
@@ -15,7 +15,7 @@ export function ClinicProfilePage() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch('/api/clinic', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), address: form.get('address'), logoUrl: form.get('logoUrl'), veterinarianName: form.get('veterinarianName'), veterinarianTitles: form.get('veterinarianTitles'), veterinarianLicenseNumber: form.get('veterinarianLicenseNumber') }) })
+      const response = await apiFetch('/api/clinic', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), address: form.get('address'), logoUrl: form.get('logoUrl'), veterinarianName: form.get('veterinarianName'), veterinarianTitles: form.get('veterinarianTitles'), veterinarianLicenseNumber: form.get('veterinarianLicenseNumber') }) })
       if (!response.ok) throw new Error()
       setProfile(await response.json() as ClinicProfile)
       setNotice('Clinic profile saved.')

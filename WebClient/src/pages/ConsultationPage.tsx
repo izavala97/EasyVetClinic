@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, FileOutput, Plus, Save, Stethoscope, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { type Consultation, type PrescriptionItem, getJson } from '../api'
+import { apiFetch, type Consultation, type PrescriptionItem, getJson } from '../api'
 
 export function ConsultationPage() {
   const { consultationId } = useParams()
@@ -30,7 +30,7 @@ export function ConsultationPage() {
     if (!consultation) return
     setError('')
     try {
-      const response = await fetch(`/api/consultations/${consultation.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chiefComplaint, clinicalNotes, diagnosis, instructions, status, prescriptionItems }) })
+      const response = await apiFetch(`/api/consultations/${consultation.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chiefComplaint, clinicalNotes, diagnosis, instructions, status, prescriptionItems }) })
       if (!response.ok) throw new Error()
       const updated = await response.json() as Consultation
       setConsultation(updated)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ClipboardPlus, FileText, Pencil, Save } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { type ConsultationHistoryItem, type Guardian, type Patient, getJson } from '../api'
+import { apiFetch, type ConsultationHistoryItem, type Guardian, type Patient, getJson } from '../api'
 
 const documentOptions = [
   { id: 'health-certificate', label: 'Health certificate' },
@@ -33,7 +33,7 @@ export function PatientDetailPage() {
   async function startConsultation() {
     if (!patient) return
     try {
-      const response = await fetch(`/api/patients/${patient.id}/consultations`, {
+      const response = await apiFetch(`/api/patients/${patient.id}/consultations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clinicianName: 'MVZ. Alondra Licona' }),
@@ -65,7 +65,7 @@ export function PatientDetailPage() {
     if (!patient) return
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`/api/patients/${patient.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), species: form.get('species'), breed: form.get('breed'), sex: form.get('sex'), weight: form.get('weight'), color: form.get('color'), allergies: form.get('allergies'), distinguishingFeatures: form.get('distinguishingFeatures'), dateOfBirth: form.get('dateOfBirth') || null, photoUrl: form.get('photoUrl'), isActive: form.get('isActive') === 'on' }) })
+      const response = await apiFetch(`/api/patients/${patient.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), species: form.get('species'), breed: form.get('breed'), sex: form.get('sex'), weight: form.get('weight'), color: form.get('color'), allergies: form.get('allergies'), distinguishingFeatures: form.get('distinguishingFeatures'), dateOfBirth: form.get('dateOfBirth') || null, photoUrl: form.get('photoUrl'), isActive: form.get('isActive') === 'on' }) })
       if (!response.ok) throw new Error()
       setPatient(await response.json() as Patient)
       setEditingPatient(false)
@@ -78,7 +78,7 @@ export function PatientDetailPage() {
     if (!guardian) return
     const form = new FormData(event.currentTarget)
     try {
-      const response = await fetch(`/api/guardians/${guardian.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), alternatePhone: form.get('alternatePhone'), address: form.get('address'), identityType: form.get('identityType'), identityNumber: form.get('identityNumber'), identityDocumentUrl: form.get('identityDocumentUrl') }) })
+      const response = await apiFetch(`/api/guardians/${guardian.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), alternatePhone: form.get('alternatePhone'), address: form.get('address'), identityType: form.get('identityType'), identityNumber: form.get('identityNumber'), identityDocumentUrl: form.get('identityDocumentUrl') }) })
       if (!response.ok) throw new Error()
       setGuardian(await response.json() as Guardian)
       setPatient((current) => current ? { ...current, guardianName: String(form.get('name')), guardianPhone: String(form.get('phone')) } : current)

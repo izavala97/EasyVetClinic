@@ -109,8 +109,16 @@ export type SaleReceipt = {
   lines: { productName: string; quantity: number; unitPrice: number }[]
 }
 
+function apiUrl(path: string): string {
+  return `${import.meta.env.VITE_API_BASE_URL ?? ''}${path}`
+}
+
+export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(apiUrl(path), init)
+}
+
 export async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path)
+  const response = await apiFetch(path)
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}.`)
   }

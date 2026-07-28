@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CalendarPlus, CalendarRange } from 'lucide-react'
-import { type Patient, type ScheduleAppointment, getJson } from '../api'
+import { apiFetch, type Patient, type ScheduleAppointment, getJson } from '../api'
 
 function currentDate() {
   return new Date().toISOString().slice(0, 10)
@@ -44,7 +44,7 @@ export function SchedulePage() {
     setNotice('')
     setError('')
     try {
-      const response = await fetch('/api/appointments', {
+      const response = await apiFetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

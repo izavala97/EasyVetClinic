@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Minus, Plus, ReceiptText, ShoppingBag } from 'lucide-react'
-import { type Patient, type Product, type SaleReceipt, getJson } from '../api'
+import { apiFetch, type Patient, type Product, type SaleReceipt, getJson } from '../api'
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'MXN' })
 
@@ -39,7 +39,7 @@ export function PointOfSalePage() {
     setError('')
     setReceipt(null)
     try {
-      const response = await fetch('/api/sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: patientId || null, paymentMethod, lines: Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity })) }) })
+      const response = await apiFetch('/api/sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: patientId || null, paymentMethod, lines: Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity })) }) })
       if (!response.ok) throw new Error()
       setReceipt(await response.json() as SaleReceipt)
       setCart({})
