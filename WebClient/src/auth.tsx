@@ -104,7 +104,13 @@ function AuthenticatedApplication({ children }: { children: ReactNode }) {
     isLoading,
     currentUser,
     error,
-    signIn: async () => instance.loginRedirect({ scopes: [apiScope] }),
+    signIn: async () => {
+      try {
+        await instance.loginRedirect({ scopes: [apiScope] })
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Sign-in could not be started.')
+      }
+    },
     signOut: async () => instance.logoutRedirect({ account: account ?? undefined }),
     refreshCurrentUser,
   }

@@ -15,10 +15,10 @@ This checklist describes the Azure resources and configuration needed before pro
 
 - Add the repository Actions variable `VITE_API_BASE_URL` with the API default domain above, without a trailing slash. This is intentionally a variable, not a secret: Vite embeds it in the browser bundle.
 - Add these non-secret repository Actions variables for the Static Web App build. They are embedded in the browser bundle and therefore must not contain secrets:
-	- `VITE_ENTRA_TENANT_ID`: `134a684d-11ef-42be-a5dc-b315dcb31571`
+	- `VITE_ENTRA_TENANT_ID`: `134a684d-d19f-4215-bae2-e45dcb315751`
 	- `VITE_ENTRA_CLIENT_ID`: `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`
 	- `VITE_ENTRA_API_SCOPE`: `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`
-	- `VITE_ENTRA_AUTHORITY`: `https://<external-id-domain>.ciamlogin.com/`, using the External ID tenant's domain prefix.
+	- `VITE_ENTRA_AUTHORITY`: `https://easyvetclinic.ciamlogin.com/easyvetclinic.onmicrosoft.com`.
 	Their expected names and formats are in [WebClient/.env.example](WebClient/.env.example).
 - The Static Web App deployment token is already stored as the GitHub secret created by Azure. Do not copy or commit that token.
 - The API workflow uses the OpenID Connect credentials created by Azure. Do not rename or delete the `AZUREAPPSERVICE_*` GitHub secrets unless the federated credential is replaced at the same time.
@@ -41,7 +41,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - Production sign-out redirect URI.
 - Authentication policy with MFA and approved user flows.
 - The External ID tenant ID, SPA client ID, API client ID, and API scope value.
-- Configured values: tenant ID `134a684d-11ef-42be-a5dc-b315dcb31571`; SPA client ID `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`; API client ID `a0c84c31-b8c4-4d60-8e25-74ace0817d54`; API scope `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`.
+- Configured values: tenant ID `134a684d-d19f-4215-bae2-e45dcb315751`; SPA client ID `1cf9c954-6737-4d9f-b192-f1f5c43a6f44`; API client ID `a0c84c31-b8c4-4d60-8e25-74ace0817d54`; API scope `api://a0c84c31-b8c4-4d60-8e25-74ace0817d54/access`.
 - The `EasyVetClinicSignUpSignIn` flow uses email/password with display name and email address.
 
 ## 3. App Service Easy Auth
