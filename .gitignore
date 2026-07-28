@@ -1,0 +1,29 @@
+# Build outputs
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+
+# Local configuration and secrets
+**/appsettings.Local.json
+**/.env
+**/.env.*
+!**/.env.example
+*.db
+*.db-shm
+*.db-wal
+
+# IDE and operating system files
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.user
+*.suo
