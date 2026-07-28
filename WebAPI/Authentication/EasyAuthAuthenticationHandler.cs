@@ -28,10 +28,18 @@ public sealed class EasyAuthAuthenticationHandler(
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(encodedPrincipal!));
             var principal = JsonSerializer.Deserialize<EasAuthPrincipal>(json);
             var claims = principal?.Claims?.Select(claim => new Claim(NormalizeClaimType(claim.Type), claim.Value)).ToList() ?? [];
-            var objectId = claims.FirstOrDefault(claim => claim.Type == "oid")?.Value;
+            var objectId = claims.FirstOrDefault(claim => claim.Type == "oid")?.Value
+                ?? Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(objectId))
             {
+                Logger.LogWarning("Easy Auth principal did not contain an object identifier. Claim types: {ClaimTypes}",
+                    string.Join(", ", claims.Select(claim => claim.Type)));
                 return Task.FromResult(AuthenticateResult.Fail("Easy Auth did not provide an Entra object ID."));
+            }
+
+            if (!claims.Any(claim => claim.Type == "oid"))
+            {
+                claims.Add(new Claim("oid", objectId));
             }
 
             var identity = new ClaimsIdentity(claims, SchemeName);
