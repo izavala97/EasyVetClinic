@@ -85,6 +85,8 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         var patients = dbContext.Patients
             .AsNoTracking()
             .Include(patient => patient.Guardian)
+            .Include(patient => patient.PatientGuardians)
+            .ThenInclude(link => link.Guardian)
             .Where(patient => patient.ClinicId == ClinicId);
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -103,6 +105,8 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
     public async Task<ActionResult<PatientSummary>> GetPatient(string patientId)
     {
         var patient = await dbContext.Patients.AsNoTracking().Include(patient => patient.Guardian)
+            .Include(patient => patient.PatientGuardians)
+            .ThenInclude(link => link.Guardian)
             .SingleOrDefaultAsync(patient => patient.ClinicId == ClinicId && patient.Id == patientId);
         return patient is null ? NotFound() : Ok(MapPatient(patient));
     }
@@ -131,7 +135,12 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             Id = Guid.NewGuid().ToString(),
             ClinicId = ClinicId,
             Name = request.Name.Trim(),
-            Phone = request.Phone.Trim()
+            Phone = request.Phone.Trim(),
+            AlternatePhone = request.AlternatePhone?.Trim() ?? string.Empty,
+            Address = request.Address?.Trim() ?? string.Empty,
+            IdentityType = request.IdentityType?.Trim() ?? string.Empty,
+            IdentityNumber = request.IdentityNumber?.Trim() ?? string.Empty,
+            IdentityDocumentUrl = request.IdentityDocumentUrl?.Trim() ?? string.Empty
         };
         dbContext.Guardians.Add(guardian);
         await dbContext.SaveChangesAsync();
@@ -180,9 +189,16 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             return ValidationProblem("Name, species, breed, sex, weight, and color are required.");
         }
 
-        var guardian = await dbContext.Guardians
-            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == request.GuardianId);
-        if (guardian is null)
+        var guardianIds = request.GuardianIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (guardianIds.Count == 0)
+        {
+            return ValidationProblem("At least one guardian is required.");
+        }
+
+        var guardians = await dbContext.Guardians
+            .Where(candidate => candidate.ClinicId == ClinicId && guardianIds.Contains(candidate.Id))
+            .ToListAsync();
+        if (guardians.Count != guardianIds.Count)
         {
             return NotFound();
         }
@@ -191,7 +207,7 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         {
             Id = Guid.NewGuid().ToString(),
             ClinicId = ClinicId,
-            GuardianId = guardian.Id,
+            GuardianId = guardians[0].Id,
             Name = request.Name.Trim(),
             Species = request.Species.Trim(),
             Breed = request.Breed.Trim(),
@@ -200,10 +216,56 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             Color = request.Color.Trim(),
             Allergies = request.Allergies.Trim()
         };
-        patient.Guardian = guardian;
+        patient.Guardian = guardians[0];
         dbContext.Patients.Add(patient);
+        dbContext.PatientGuardians.AddRange(guardians.Select(guardian => new PatientGuardian
+        {
+            PatientId = patient.Id,
+            GuardianId = guardian.Id
+        }));
         await dbContext.SaveChangesAsync();
         return Created($"api/patients/{patient.Id}", MapPatient(patient));
+    }
+
+    [HttpPost("patients/{patientId}/guardians/{guardianId}")]
+    public async Task<IActionResult> AddGuardianToPatient(string patientId, string guardianId)
+    {
+        var patientExists = await dbContext.Patients.AnyAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
+        var guardianExists = await dbContext.Guardians.AnyAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == guardianId);
+        if (!patientExists || !guardianExists)
+        {
+            return NotFound();
+        }
+
+        if (!await dbContext.PatientGuardians.AnyAsync(link => link.PatientId == patientId && link.GuardianId == guardianId))
+        {
+            dbContext.PatientGuardians.Add(new PatientGuardian { PatientId = patientId, GuardianId = guardianId });
+            await dbContext.SaveChangesAsync();
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("patients/{patientId}/guardians/{guardianId}")]
+    public async Task<IActionResult> RemoveGuardianFromPatient(string patientId, string guardianId)
+    {
+        var patient = await dbContext.Patients
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
+        if (patient is null || patient.GuardianId == guardianId)
+        {
+            return NotFound();
+        }
+
+        var link = await dbContext.PatientGuardians
+            .SingleOrDefaultAsync(candidate => candidate.PatientId == patientId && candidate.GuardianId == guardianId);
+        if (link is null)
+        {
+            return NotFound();
+        }
+
+        dbContext.PatientGuardians.Remove(link);
+        await dbContext.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpPut("patients/{patientId}")]
@@ -368,11 +430,17 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
     }
 
     [HttpGet("appointments")]
-    public async Task<ActionResult<IReadOnlyList<ScheduleAppointment>>> GetAppointments([FromQuery] DateOnly? date)
+    public async Task<ActionResult<IReadOnlyList<ScheduleAppointment>>> GetAppointments([FromQuery] DateOnly? date, [FromQuery] int? year, [FromQuery] int? month)
     {
         var selectedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var startOfDay = selectedDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endOfDay = startOfDay.AddDays(1);
+        var startDate = year is not null && month is not null
+            ? new DateOnly(year.Value, month.Value, 1)
+            : selectedDate;
+        var endDate = year is not null && month is not null
+            ? startDate.AddMonths(1)
+            : startDate.AddDays(1);
+        var startOfRange = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endOfRange = endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var clinicAppointments = await dbContext.Appointments
             .AsNoTracking()
             .Include(appointment => appointment.Patient)
@@ -380,7 +448,7 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
             .ToListAsync();
 
         return Ok(clinicAppointments
-            .Where(appointment => appointment.StartsAt >= startOfDay && appointment.StartsAt < endOfDay)
+            .Where(appointment => appointment.StartsAt >= startOfRange && appointment.StartsAt < endOfRange)
             .OrderBy(appointment => appointment.StartsAt)
             .Select(MapAppointment)
             .ToList());
@@ -399,6 +467,16 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         if (patient is null)
         {
             return NotFound();
+        }
+
+        if (await dbContext.Appointments.AnyAsync(appointment =>
+                appointment.ClinicId == ClinicId && appointment.StartsAt == request.StartsAt))
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "The selected appointment time is already booked.",
+                Status = StatusCodes.Status409Conflict
+            });
         }
 
         var appointment = new Appointment
@@ -432,9 +510,9 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
     [HttpPost("sales")]
     public async Task<ActionResult<SaleReceipt>> CompleteSale(CheckoutRequest request)
     {
-        if (request.Lines.Count == 0 || string.IsNullOrWhiteSpace(request.PaymentMethod) || request.Lines.Any(line => line.Quantity <= 0))
+        if ((request.Lines.Count == 0 && request.ServiceLines.Count == 0) || string.IsNullOrWhiteSpace(request.PaymentMethod) || request.Lines.Any(line => line.Quantity <= 0) || request.ServiceLines.Any(line => string.IsNullOrWhiteSpace(line.Name) || line.UnitPrice <= 0))
         {
-            return ValidationProblem("A payment method and at least one line with a positive quantity are required.");
+            return ValidationProblem("A payment method and at least one valid product or service line are required.");
         }
 
         if (!string.IsNullOrWhiteSpace(request.PatientId) && !await dbContext.Patients.AnyAsync(patient => patient.ClinicId == ClinicId && patient.Id == request.PatientId))
@@ -474,6 +552,18 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
                 ProductName = product.Name,
                 UnitPrice = product.UnitPrice,
                 Quantity = quantity
+            });
+        }
+
+        foreach (var service in request.ServiceLines)
+        {
+            sale.Lines.Add(new SaleLine
+            {
+                Id = Guid.NewGuid().ToString(),
+                ProductId = string.Empty,
+                ProductName = service.Name.Trim(),
+                UnitPrice = service.UnitPrice,
+                Quantity = 1
             });
         }
 
@@ -647,7 +737,10 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         patient.DistinguishingFeatures,
         patient.DateOfBirth,
         patient.PhotoUrl,
-        patient.IsActive);
+        patient.IsActive,
+        patient.PatientGuardians.Count > 0
+            ? patient.PatientGuardians.Select(link => MapGuardian(link.Guardian)).OrderBy(guardian => guardian.Name).ToList()
+            : [MapGuardian(patient.Guardian)]);
 
     private static GuardianSummary MapGuardian(Guardian guardian) => new(
         guardian.Id,

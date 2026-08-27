@@ -30,6 +30,7 @@ public sealed class Guardian
     public string IdentityDocumentUrl { get; set; } = string.Empty;
     public Clinic Clinic { get; set; } = null!;
     public List<Patient> Patients { get; } = [];
+    public List<PatientGuardian> PatientGuardians { get; } = [];
 }
 
 public sealed class Patient
@@ -51,10 +52,19 @@ public sealed class Patient
     public DateOnly? LastVisit { get; set; }
     public Clinic Clinic { get; set; } = null!;
     public Guardian Guardian { get; set; } = null!;
+    public List<PatientGuardian> PatientGuardians { get; } = [];
     public List<Consultation> Consultations { get; } = [];
     public List<Appointment> Appointments { get; } = [];
     public List<WeightRecord> WeightRecords { get; } = [];
     public List<VaccinationRecord> VaccinationRecords { get; } = [];
+}
+
+public sealed class PatientGuardian
+{
+    public string PatientId { get; set; } = string.Empty;
+    public string GuardianId { get; set; } = string.Empty;
+    public Patient Patient { get; set; } = null!;
+    public Guardian Guardian { get; set; } = null!;
 }
 
 public sealed class Appointment

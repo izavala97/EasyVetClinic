@@ -16,7 +16,8 @@ public sealed record PatientSummary(
     string DistinguishingFeatures,
     DateOnly? DateOfBirth,
     string PhotoUrl,
-    bool IsActive);
+    bool IsActive,
+    IReadOnlyList<GuardianSummary> Guardians);
 
 public sealed record GuardianSummary(
     string Id,
@@ -28,7 +29,14 @@ public sealed record GuardianSummary(
     string IdentityNumber,
     string IdentityDocumentUrl);
 
-public sealed record CreateGuardianRequest(string Name, string Phone);
+public sealed record CreateGuardianRequest(
+    string Name,
+    string Phone,
+    string? AlternatePhone,
+    string? Address,
+    string? IdentityType,
+    string? IdentityNumber,
+    string? IdentityDocumentUrl);
 
 public sealed record UpdateGuardianRequest(
     string Name,
@@ -40,7 +48,7 @@ public sealed record UpdateGuardianRequest(
     string IdentityDocumentUrl);
 
 public sealed record CreatePatientRequest(
-    string GuardianId,
+    IReadOnlyList<string> GuardianIds,
     string Name,
     string Species,
     string Breed,
@@ -106,11 +114,13 @@ public sealed record ProductSummary(
     int StockOnHand);
 
 public sealed record CheckoutLineRequest(string ProductId, int Quantity);
+public sealed record ServiceSaleLineRequest(string Name, decimal UnitPrice);
 
 public sealed record CheckoutRequest(
     string? PatientId,
     string PaymentMethod,
-    IReadOnlyList<CheckoutLineRequest> Lines);
+    IReadOnlyList<CheckoutLineRequest> Lines,
+    IReadOnlyList<ServiceSaleLineRequest> ServiceLines);
 
 public sealed record SaleReceipt(
     string Id,

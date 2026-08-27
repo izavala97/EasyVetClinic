@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ClipboardPlus, FileText, Pencil, Save } from 'lucide-react'
+import { ArrowLeft, ClipboardPlus, FileText, Pencil, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, type ClinicProfile, type ConsultationHistoryItem, type Guardian, type Patient, getJson } from '../api'
 
@@ -13,10 +13,10 @@ export function PatientDetailPage() {
   const { patientId } = useParams()
   const navigate = useNavigate()
   const [patient, setPatient] = useState<Patient | null>(null)
-  const [guardian, setGuardian] = useState<Guardian | null>(null)
+  const [availableGuardians, setAvailableGuardians] = useState<Guardian[]>([])
+  const [guardianIdToLink, setGuardianIdToLink] = useState('')
   const [consultations, setConsultations] = useState<ConsultationHistoryItem[]>([])
   const [editingPatient, setEditingPatient] = useState(false)
-  const [editingGuardian, setEditingGuardian] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -24,11 +24,38 @@ export function PatientDetailPage() {
     void Promise.all([getJson<Patient>(`/api/patients/${patientId}`), getJson<ConsultationHistoryItem[]>(`/api/patients/${patientId}/consultations`)]).then(([patientRecord, history]) => {
       setPatient(patientRecord)
       setConsultations(history)
-      return getJson<Guardian>(`/api/guardians/${patientRecord.guardianId}`)
-    }).then(setGuardian).catch(() => {
+    }).catch(() => {
       setError('This patient record could not be found.')
     })
+    void getJson<Guardian[]>('/api/guardians').then(setAvailableGuardians).catch(() => {
+      setError('Guardians could not be loaded.')
+    })
   }, [patientId])
+
+  async function linkExistingGuardian() {
+    if (!patient || !guardianIdToLink) return
+    try {
+      const response = await apiFetch(`/api/patients/${patient.id}/guardians/${guardianIdToLink}`, { method: 'POST' })
+      if (!response.ok) throw new Error()
+      setPatient(await getJson<Patient>(`/api/patients/${patient.id}`))
+      setGuardianIdToLink('')
+      setError('')
+    } catch {
+      setError('The guardian could not be linked to this patient.')
+    }
+  }
+
+  async function removeGuardian(guardianId: string) {
+    if (!patient) return
+    try {
+      const response = await apiFetch(`/api/patients/${patient.id}/guardians/${guardianId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error()
+      setPatient(await getJson<Patient>(`/api/patients/${patient.id}`))
+      setError('')
+    } catch {
+      setError('The guardian could not be removed from this patient.')
+    }
+  }
 
   async function startConsultation() {
     if (!patient) return
@@ -77,20 +104,6 @@ export function PatientDetailPage() {
     } catch { setError('Patient information could not be updated.') }
   }
 
-  async function saveGuardian(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!guardian) return
-    const form = new FormData(event.currentTarget)
-    try {
-      const response = await apiFetch(`/api/guardians/${guardian.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), phone: form.get('phone'), alternatePhone: form.get('alternatePhone'), address: form.get('address'), identityType: form.get('identityType'), identityNumber: form.get('identityNumber'), identityDocumentUrl: form.get('identityDocumentUrl') }) })
-      if (!response.ok) throw new Error()
-      setGuardian(await response.json() as Guardian)
-      setPatient((current) => current ? { ...current, guardianName: String(form.get('name')), guardianPhone: String(form.get('phone')) } : current)
-      setEditingGuardian(false)
-      setError('')
-    } catch { setError('Guardian information could not be updated.') }
-  }
-
   if (error && !patient) {
     return <><Link className="back-link" to="/patients"><ArrowLeft size={16} /> Back to patients</Link><div className="notice error" role="alert">{error}</div></>
   }
@@ -107,9 +120,9 @@ export function PatientDetailPage() {
       {error && <div className="notice error" role="alert">{error}</div>}
       <section className="content-grid patient-record-grid">
         <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Patient overview</p><h2>Record details</h2></div><button className="icon-button" type="button" aria-label="Edit patient" onClick={() => setEditingPatient((value) => !value)}><Pencil size={17} /></button></div>{editingPatient ? <form className="record-edit-form" onSubmit={savePatient}><label>Name<input name="name" defaultValue={patient.name} required /></label><label>Species<input name="species" defaultValue={patient.species} required /></label><label>Breed<input name="breed" defaultValue={patient.breed} required /></label><label>Sex<input name="sex" defaultValue={patient.sex} required /></label><label>Weight<input name="weight" defaultValue={patient.weight} required /></label><label>Color<input name="color" defaultValue={patient.color} required /></label><label>Allergies<input name="allergies" defaultValue={patient.allergies.join('; ')} /></label><label>Distinguishing features<input name="distinguishingFeatures" defaultValue={patient.distinguishingFeatures} /></label><label>Date of birth<input name="dateOfBirth" type="date" defaultValue={patient.dateOfBirth ?? ''} /></label><label>Photo URL<input name="photoUrl" type="url" defaultValue={patient.photoUrl} /></label><label className="toggle-field"><input name="isActive" type="checkbox" defaultChecked={patient.isActive} /> Active patient</label><button className="secondary-action" type="submit"><Save size={16} /> Save patient</button></form> : <dl className="record-details"><div><dt>Species</dt><dd>{patient.species}</dd></div><div><dt>Breed</dt><dd>{patient.breed}</dd></div><div><dt>Sex</dt><dd>{patient.sex}</dd></div><div><dt>Weight</dt><dd>{patient.weight}</dd></div><div><dt>Color</dt><dd>{patient.color}</dd></div><div><dt>Allergies</dt><dd>{patient.allergies.join(', ') || 'None recorded'}</dd></div><div><dt>Features</dt><dd>{patient.distinguishingFeatures || 'Not recorded'}</dd></div><div><dt>Last visit</dt><dd>{patient.lastVisit || 'Not recorded'}</dd></div></dl>}</section>
-        <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Guardian</p><h2>{patient.guardianName}</h2></div><button className="icon-button" type="button" aria-label="Edit guardian" onClick={() => setEditingGuardian((value) => !value)}><Pencil size={17} /></button></div>{editingGuardian && guardian ? <form className="record-edit-form" onSubmit={saveGuardian}><label>Name<input name="name" defaultValue={guardian.name} required /></label><label>Phone<input name="phone" defaultValue={guardian.phone} required /></label><label>Alternate phone<input name="alternatePhone" defaultValue={guardian.alternatePhone} /></label><label>Address<input name="address" defaultValue={guardian.address} /></label><label>Identity type<input name="identityType" defaultValue={guardian.identityType} /></label><label>Identity number<input name="identityNumber" defaultValue={guardian.identityNumber} /></label><label>Identity document URL<input name="identityDocumentUrl" type="url" defaultValue={guardian.identityDocumentUrl} /></label><button className="secondary-action" type="submit"><Save size={16} /> Save guardian</button></form> : <dl className="record-details"><div><dt>Phone</dt><dd>{patient.guardianPhone}</dd></div>{guardian && <><div><dt>Alternate phone</dt><dd>{guardian.alternatePhone || 'Not recorded'}</dd></div><div><dt>Address</dt><dd>{guardian.address || 'Not recorded'}</dd></div><div><dt>Identity</dt><dd>{[guardian.identityType, guardian.identityNumber].filter(Boolean).join(' · ') || 'Not recorded'}</dd></div></>}</dl>}</section>
-      </section>
       <section className="panel patient-consultation-history"><div className="panel-heading"><div><p className="eyebrow">Clinical timeline</p><h2>Recent consultations</h2></div><Link className="secondary-action" to={`/consultations?query=${encodeURIComponent(patient.name)}`}>View all</Link></div><div className="history-list">{consultations.slice(0, 4).map((consultation) => <Link to={`/consultations/${consultation.id}`} key={consultation.id}><span>{new Date(consultation.startedAt).toLocaleDateString()}</span><strong>{consultation.diagnosis || 'Clinical notes in progress'}</strong><small>{consultation.clinicianName} · {consultation.status === 'Completed' ? 'Completed' : 'In progress'}</small></Link>)}</div>{consultations.length === 0 && <p className="empty-state">No consultations have been recorded for this patient.</p>}</section>
+      </section>
+      <section className="panel patient-guardians"><div className="panel-heading"><div><p className="eyebrow">Guardians</p><h2>Linked contacts</h2></div><Link className="secondary-action" to={`/guardians/new?patientId=${patient.id}&returnTo=${encodeURIComponent(`/patients/${patient.id}`)}`}><Pencil size={16} /> Add new guardian</Link></div><div className="guardian-list">{patient.guardians.map((linkedGuardian) => <article key={linkedGuardian.id}><strong>{linkedGuardian.name}</strong><span>{linkedGuardian.phone}{linkedGuardian.alternatePhone && ` · ${linkedGuardian.alternatePhone}`}</span><small>{linkedGuardian.id === patient.guardianId ? 'Primary guardian' : 'Additional guardian'}</small>{linkedGuardian.id !== patient.guardianId && <button className="icon-button" type="button" aria-label={`Remove ${linkedGuardian.name}`} onClick={() => void removeGuardian(linkedGuardian.id)}><Trash2 size={16} /></button>}</article>)}</div>{availableGuardians.some((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)) && <div className="existing-guardian"><label>Link an existing guardian<select value={guardianIdToLink} onChange={(event) => setGuardianIdToLink(event.target.value)}><option value="">Select guardian</option>{availableGuardians.filter((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} - {candidate.phone}</option>)}</select></label><button className="secondary-action" type="button" disabled={!guardianIdToLink} onClick={() => void linkExistingGuardian()}>Link guardian</button></div>}</section>
       <section className="panel documents"><div className="panel-heading"><div><p className="eyebrow">Linked documents</p><h2>Clinical forms</h2></div><FileText size={22} /></div><div className="document-actions">{documentOptions.map((document) => <button key={document.id} type="button" onClick={() => void prepareDocument(document.id)}><FileText size={18} />{document.label}</button>)}</div></section>
     </>
   )

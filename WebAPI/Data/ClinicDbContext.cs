@@ -8,6 +8,7 @@ public class ClinicDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<ClinicUser> ClinicUsers => Set<ClinicUser>();
     public DbSet<Guardian> Guardians => Set<Guardian>();
     public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<PatientGuardian> PatientGuardians => Set<PatientGuardian>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Consultation> Consultations => Set<Consultation>();
     public DbSet<WeightRecord> WeightRecords => Set<WeightRecord>();
@@ -60,6 +61,13 @@ public class ClinicDbContext(DbContextOptions options) : DbContext(options)
             entity.HasIndex(patient => new { patient.ClinicId, patient.Name });
             entity.HasOne(patient => patient.Clinic).WithMany(clinic => clinic.Patients).HasForeignKey(patient => patient.ClinicId);
             entity.HasOne(patient => patient.Guardian).WithMany(guardian => guardian.Patients).HasForeignKey(patient => patient.GuardianId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<PatientGuardian>(entity =>
+        {
+            entity.HasKey(link => new { link.PatientId, link.GuardianId });
+            entity.HasOne(link => link.Patient).WithMany(patient => patient.PatientGuardians).HasForeignKey(link => link.PatientId);
+            entity.HasOne(link => link.Guardian).WithMany(guardian => guardian.PatientGuardians).HasForeignKey(link => link.GuardianId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Appointment>(entity =>

@@ -296,6 +296,21 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.ToTable("Patients");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.PatientGuardian", b =>
+                {
+                    b.Property<string>("PatientId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GuardianId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("PatientId", "GuardianId");
+
+                    b.HasIndex("GuardianId");
+
+                    b.ToTable("PatientGuardians");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Prescription", b =>
                 {
                     b.Property<string>("Id")
@@ -620,6 +635,25 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Navigation("Guardian");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.PatientGuardian", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Guardian", "Guardian")
+                        .WithMany("PatientGuardians")
+                        .HasForeignKey("GuardianId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
+                        .WithMany("PatientGuardians")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Guardian");
+
+                    b.Navigation("Patient");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Prescription", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Consultation", "Consultation")
@@ -726,6 +760,8 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Guardian", b =>
                 {
+                    b.Navigation("PatientGuardians");
+
                     b.Navigation("Patients");
                 });
 
@@ -734,6 +770,8 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Navigation("Appointments");
 
                     b.Navigation("Consultations");
+
+                    b.Navigation("PatientGuardians");
 
                     b.Navigation("VaccinationRecords");
 

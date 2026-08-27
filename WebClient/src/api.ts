@@ -23,6 +23,7 @@ export type Patient = {
   dateOfBirth: string | null
   photoUrl: string
   isActive: boolean
+  guardians: Guardian[]
 }
 
 export type Guardian = {
