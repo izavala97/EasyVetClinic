@@ -28,7 +28,26 @@ To reset it to an empty schema, stop the API and run this command from the repos
 .\scripts\start-dev.ps1 -ResetDatabase
 ```
 
-The `ClinicDatabase` connection string and `Database:Provider` are configured in [appsettings.json](appsettings.json). Local development defaults to `Sqlite`. Production must set both `Database__Provider=SqlServer` and an Azure SQL `ConnectionStrings__ClinicDatabase` value only after SQL Server migrations have been generated and validated.
+The `ClinicDatabase` connection string and `Database:Provider` are configured in [appsettings.json](appsettings.json). Local development defaults to `Sqlite`. EF Core creates and updates the SQLite file automatically when the API starts; do not run a SQL script locally.
+
+## Migrations
+
+The provider-specific migration paths are intentional:
+
+- `Data/Migrations/` contains SQLite migrations for local development. `ClinicDbContextFactory` ensures `dotnet ef` commands targeting `ClinicDbContext` use SQLite.
+- `Data/SqlServerMigrations/` contains SQL Server migrations for Azure SQL production. They must be applied through a controlled deployment process, never by the API at production startup.
+
+Create a local SQLite migration after changing the EF model:
+
+```powershell
+dotnet ef migrations add <MigrationName> --context ClinicDbContext --output-dir Data/Migrations
+```
+
+Generate the SQL Server deployment script from its EF Core migrations when preparing a release:
+
+```powershell
+dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/Apply-SqlServerMigrations.sql
+```
 
 ## Current Endpoints
 
@@ -51,4 +70,4 @@ The `ClinicDatabase` connection string and `Database:Provider` are configured in
 
 ## Current State
 
-The API uses EF Core with SQLite for local development and includes the SQL Server EF Core provider for the production migration. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists.
+The API uses EF Core with SQLite for local development and a separate SQL Server migration history for production. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists.

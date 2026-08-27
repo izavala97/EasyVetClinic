@@ -9,7 +9,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - Static Web App: `EasyVetClinic-WebCli`, deployed by [azure-static-web-apps-red-plant-0ec64f60f.yml](.github/workflows/azure-static-web-apps-red-plant-0ec64f60f.yml).
 - Static Web App production domain: `https://red-plant-0ec64f60f.7.azurestaticapps.net`.
 - API default domain: `https://easyvetclinic-api-ayhmbsb2cbajeef2.canadacentral-01.azurewebsites.net`.
-- Local development defaults to SQLite. Production uses the existing Azure SQL database after its initial migration script has been applied.
+- Local development defaults to SQLite. Production uses the existing Azure SQL database after its SQL Server EF Core migrations have been applied by the release process.
 
 ## GitHub Actions configuration
 
@@ -62,7 +62,7 @@ This checklist describes the Azure resources and configuration needed before pro
 - SQL networking that permits the App Service connection: use private networking for production, or temporarily enable the server's "Allow Azure services and resources to access this server" firewall option while private networking is not configured.
 - Production backup retention, geo-redundancy, and sizing decisions.
 - A deployment migration process that runs before the application release, not at API startup.
-- Apply [scripts/Apply-SqlServerMigrations.sql](scripts/Apply-SqlServerMigrations.sql) once through Azure Portal Query Editor or a controlled release connection before enabling the SQL Server provider. The script is idempotent and records its migration in `__EFMigrationsHistory`.
+- Generate and apply the SQL Server EF Core migration script through the controlled release connection before enabling the SQL Server provider. Generate it with `dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/Apply-SqlServerMigrations.sql`; do not maintain a hand-written script or run schema migrations at API startup.
 - Create the managed identity database user as the SQL Entra administrator, then grant `db_datareader` and `db_datawriter` to that user. The application does not need schema-change permissions at runtime.
 - Set these App Service settings together after the migration succeeds:
 	- `Database__Provider=SqlServer`

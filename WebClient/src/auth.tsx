@@ -8,6 +8,7 @@ const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID
 const authorityHost = import.meta.env.VITE_ENTRA_AUTHORITY?.replace(/\/+$/, '')
 const apiScope = import.meta.env.VITE_ENTRA_API_SCOPE
 const authority = authorityHost && tenantId ? `${authorityHost}/${tenantId}` : undefined
+const useDevelopmentAuthentication = import.meta.env.DEV
 
 const msalInstance = tenantId && clientId && authority && apiScope
   ? new PublicClientApplication({
@@ -39,6 +40,10 @@ export async function initializeAuthentication() {
 }
 
 export function AuthenticationProvider({ children }: { children: ReactNode }) {
+  if (useDevelopmentAuthentication) {
+    return <DevelopmentAuthenticatedApplication>{children}</DevelopmentAuthenticatedApplication>
+  }
+
   if (!msalInstance) {
     return <AuthenticationContext.Provider value={{
       configured: false,
@@ -52,6 +57,40 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
   }
 
   return <MsalProvider instance={msalInstance}><AuthenticatedApplication>{children}</AuthenticatedApplication></MsalProvider>
+}
+
+function DevelopmentAuthenticatedApplication({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  async function refreshCurrentUser() {
+    setIsLoading(true)
+    try {
+      setCurrentUser(await getJson<CurrentUser>('/api/me'))
+      setError(null)
+    } catch {
+      setCurrentUser(null)
+      setError('Your local clinic account could not be verified by the API.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    setAccessTokenProvider(undefined)
+    void refreshCurrentUser()
+  }, [])
+
+  return <AuthenticationContext.Provider value={{
+    configured: true,
+    isLoading,
+    currentUser,
+    error,
+    signIn: async () => undefined,
+    signOut: async () => undefined,
+    refreshCurrentUser,
+  }}>{children}</AuthenticationContext.Provider>
 }
 
 function AuthenticatedApplication({ children }: { children: ReactNode }) {

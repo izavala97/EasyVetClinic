@@ -11,7 +11,7 @@ npm run build
 npm run lint
 ```
 
-During development, Vite proxies `/api` and `/health` to `http://localhost:5094`. Start the API from `../WebAPI` before launching the client.
+During development, Vite proxies `/api` and `/health` to `http://localhost:5120`. Start the API from `../WebAPI` before launching the client. The Vite development server uses the API's local development identity, so no Microsoft Entra or `VITE_ENTRA_*` configuration is required to test the local app. Production builds require the Entra variables documented in [.env.example](.env.example).
 
 ## Current Experience
 
@@ -24,4 +24,4 @@ During development, Vite proxies `/api` and `/health` to `http://localhost:5094`
 
 Components, types, properties, API clients, and other technical identifiers use English. User-facing content will be localized through the client as the clinical workflows are completed.
 
-The current client consumes the local API. EasyAuth, protected routes, and permission handling will be added before production.
+The client uses MSAL and bearer tokens in production. Local development uses the API development authentication handler so that clinic workflows can be tested without contacting Microsoft Entra.

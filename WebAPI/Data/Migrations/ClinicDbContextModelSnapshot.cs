@@ -549,7 +549,7 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
                         .WithMany("Appointments")
                         .HasForeignKey("ClinicId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
@@ -607,7 +607,7 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.HasOne("EasyVetClinic.Api.Data.Guardian", "Guardian")
                         .WithMany("Patients")
                         .HasForeignKey("GuardianId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Clinic");
@@ -653,7 +653,7 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
                         .WithMany("Sales")
                         .HasForeignKey("ClinicId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
