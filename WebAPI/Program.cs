@@ -7,6 +7,22 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var appInsightsConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"]
+	?? Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING")
+	?? Environment.GetEnvironmentVariable("APPINSIGHTS_CONNECTION_STRING");
+
+if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
+{
+	builder.Services.AddApplicationInsightsTelemetry(options =>
+	{
+		options.ConnectionString = appInsightsConnectionString;
+	});
+}
+else
+{
+	builder.Services.AddApplicationInsightsTelemetry();
+}
+
 builder.Services.AddControllers();
 var connectionString = builder.Configuration.GetConnectionString("ClinicDatabase")
 	?? throw new InvalidOperationException("The ClinicDatabase connection string is required.");
