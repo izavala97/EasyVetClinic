@@ -15,6 +15,7 @@ import { ClinicProfilePage } from './pages/ClinicProfilePage.tsx'
 import { RegistrationPage } from './pages/RegistrationPage.tsx'
 import { PrescriptionPage } from './pages/PrescriptionPage.tsx'
 import { SchedulePage } from './pages/SchedulePage.tsx'
+import { AppointmentsPage } from './pages/AppointmentsPage.tsx'
 import { OnboardingPage } from './pages/OnboardingPage.tsx'
 
 await initializeAuthentication()
@@ -34,6 +35,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="consultations/:consultationId/prescription" element={<PrescriptionPage />} />
           <Route path="consultations" element={<ConsultationsPage />} />
           <Route path="schedule" element={<SchedulePage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="point-of-sale" element={<PointOfSalePage />} />
           <Route path="clinic-profile" element={<ClinicProfilePage />} />

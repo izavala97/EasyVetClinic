@@ -90,7 +90,7 @@ public sealed record ConsultationListItem(
     string Status,
     string Diagnosis);
 
-public sealed record AppointmentSummary(string Time, string PatientName, string Reason, string ClinicianName);
+public sealed record AppointmentSummary(string Id, DateTimeOffset StartsAt, string Time, string PatientName, string Reason, string ClinicianName);
 
 public sealed record ScheduleAppointment(
     string Id,
@@ -101,6 +101,12 @@ public sealed record ScheduleAppointment(
     string ClinicianName);
 
 public sealed record CreateAppointmentRequest(
+    string PatientId,
+    DateTimeOffset StartsAt,
+    string Reason,
+    string ClinicianName);
+
+public sealed record UpdateAppointmentRequest(
     string PatientId,
     DateTimeOffset StartsAt,
     string Reason,

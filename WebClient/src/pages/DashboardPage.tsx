@@ -32,11 +32,11 @@ export function DashboardPage() {
         <div className="panel-heading"><div><p className="eyebrow">Schedule</p><h2>Upcoming appointments</h2></div><CalendarDays size={22} /></div>
         <div className="appointment-list">
           {dashboard?.upcomingAppointments.map((appointment) => (
-            <article key={`${appointment.time}-${appointment.patientName}`} className="appointment">
+            <Link key={appointment.id} className="appointment" to={`/appointments?appointmentId=${appointment.id}&month=${appointment.startsAt.slice(0, 7)}`}>
               <time>{appointment.time}</time>
               <div><strong>{appointment.patientName}</strong><span>{appointment.reason}</span></div>
               <small>{appointment.clinicianName}</small>
-            </article>
+            </Link>
           ))}
         </div>
       </section>

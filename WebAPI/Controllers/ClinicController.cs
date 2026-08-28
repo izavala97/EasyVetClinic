@@ -56,27 +56,39 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var startOfDay = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endOfDay = startOfDay.AddDays(1);
+        var tomorrow = today.AddDays(1);
         var clinicAppointments = await dbContext.Appointments
             .Where(appointment => appointment.ClinicId == ClinicId)
             .Include(appointment => appointment.Patient)
             .ToListAsync();
-        var appointments = clinicAppointments
-            .Where(appointment => appointment.StartsAt >= startOfDay && appointment.StartsAt < endOfDay)
+        var todayAppointments = clinicAppointments
+            .Where(appointment => DateOnly.FromDateTime(appointment.StartsAt.DateTime) == today)
+            .OrderBy(appointment => appointment.StartsAt)
+            .ToList();
+        var upcomingAppointments = clinicAppointments
+            .Where(appointment =>
+                DateOnly.FromDateTime(appointment.StartsAt.DateTime) >= today &&
+                DateOnly.FromDateTime(appointment.StartsAt.DateTime) <= tomorrow)
             .OrderBy(appointment => appointment.StartsAt)
             .ToList();
 
         return Ok(new DashboardSummary(
             clinic.Name,
-            appointments.Count,
+            todayAppointments.Count,
             await dbContext.Patients.CountAsync(patient => patient.ClinicId == ClinicId),
             0,
-            appointments.Take(3).Select(appointment => new AppointmentSummary(
-                appointment.StartsAt.ToString("HH:mm"),
-                appointment.Patient.Name,
-                appointment.Reason,
-                appointment.ClinicianName)).ToList()));
+            upcomingAppointments.Select(appointment =>
+            {
+                var scheduledDate = DateOnly.FromDateTime(appointment.StartsAt.DateTime);
+                var dayLabel = scheduledDate == today ? "Today" : "Tomorrow";
+                return new AppointmentSummary(
+                    appointment.Id,
+                    appointment.StartsAt,
+                    $"{dayLabel}, {appointment.StartsAt:HH:mm}",
+                    appointment.Patient.Name,
+                    appointment.Reason,
+                    appointment.ClinicianName);
+            }).ToList()));
     }
 
     [HttpGet("patients")]
@@ -492,6 +504,49 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         await dbContext.SaveChangesAsync();
 
         return Created($"api/appointments/{appointment.Id}", MapAppointment(appointment, patient.Name));
+    }
+
+    [HttpPut("appointments/{appointmentId}")]
+    public async Task<ActionResult<ScheduleAppointment>> UpdateAppointment(string appointmentId, UpdateAppointmentRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason) || string.IsNullOrWhiteSpace(request.ClinicianName))
+        {
+            return ValidationProblem("Reason and clinician name are required.");
+        }
+
+        var appointment = await dbContext.Appointments
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == appointmentId);
+        if (appointment is null)
+        {
+            return NotFound();
+        }
+
+        var patient = await dbContext.Patients
+            .SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == request.PatientId);
+        if (patient is null)
+        {
+            return NotFound();
+        }
+
+        if (await dbContext.Appointments.AnyAsync(candidate =>
+                candidate.ClinicId == ClinicId &&
+                candidate.Id != appointmentId &&
+                candidate.StartsAt == request.StartsAt))
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "The selected appointment time is already booked.",
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+
+        appointment.PatientId = patient.Id;
+        appointment.StartsAt = request.StartsAt;
+        appointment.Reason = request.Reason.Trim();
+        appointment.ClinicianName = request.ClinicianName.Trim();
+        await dbContext.SaveChangesAsync();
+
+        return Ok(MapAppointment(appointment, patient.Name));
     }
 
     [HttpGet("products")]

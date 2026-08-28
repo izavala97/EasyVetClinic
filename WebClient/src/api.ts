@@ -3,7 +3,7 @@ export type Dashboard = {
   todayAppointments: number
   activePatients: number
   boardingGuests: number
-  upcomingAppointments: { time: string; patientName: string; reason: string; clinicianName: string }[]
+  upcomingAppointments: { id: string; startsAt: string; time: string; patientName: string; reason: string; clinicianName: string }[]
 }
 
 export type Patient = {
