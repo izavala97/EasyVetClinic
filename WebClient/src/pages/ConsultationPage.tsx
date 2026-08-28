@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, FileOutput, Plus, Save, Stethoscope, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuthentication } from '../auth'
 import { apiFetch, type Consultation, type PrescriptionItem, getJson } from '../api'
 
 export function ConsultationPage() {
@@ -13,6 +14,7 @@ export function ConsultationPage() {
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([])
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const { currentUser } = useAuthentication()
 
   useEffect(() => {
     if (!consultationId) return
@@ -55,10 +57,34 @@ export function ConsultationPage() {
     setPrescriptionItems((items) => items.filter((_, itemIndex) => itemIndex !== index).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))
   }
 
+  async function deleteConsultation() {
+    if (!consultation) return
+    const isClinicOwner = currentUser?.role === 'ClinicAdmin' || currentUser?.role === 'SuperAdmin'
+    const canDelete = consultation.status !== 'Completed' || isClinicOwner
+    if (!canDelete) return
+
+    const confirmed = window.confirm(consultation.status === 'Completed'
+      ? 'Delete this completed consultation? This action cannot be undone.'
+      : 'Delete this in-progress consultation? This action cannot be undone.')
+    if (!confirmed) return
+
+    setError('')
+    try {
+      const response = await apiFetch(`/api/consultations/${consultation.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error()
+      setNotice('Consultation deleted.')
+      window.location.assign(`/patients/${consultation.patientId}`)
+    } catch {
+      setError('The consultation could not be deleted.')
+    }
+  }
+
+  const canDeleteConsultation = consultation.status !== 'Completed' || (currentUser?.role === 'ClinicAdmin' || currentUser?.role === 'SuperAdmin')
+
   return (
     <>
       <Link className="back-link" to={`/patients/${consultation.patientId}`}><ArrowLeft size={16} /> Back to {consultation.patientName}</Link>
-      <header className="page-header"><div><p className="eyebrow">{consultation.status === 'Completed' ? 'Completed consultation' : 'Active consultation'}</p><h1>{consultation.patientName}</h1><p className="consultation-subtitle">Guardian: {consultation.guardianName} · {consultation.clinicianName}</p></div><Stethoscope size={26} /></header>
+      <header className="page-header"><div><p className="eyebrow">{consultation.status === 'Completed' ? 'Completed consultation' : 'Active consultation'}</p><h1>{consultation.patientName}</h1><p className="consultation-subtitle">Guardian: {consultation.guardianName} · {consultation.clinicianName}</p></div><div className="header-actions"><Stethoscope size={26} />{canDeleteConsultation && <button className="secondary-action danger" type="button" onClick={() => void deleteConsultation()}><Trash2 size={16} /> Delete</button>}</div></header>
       {notice && <div className="notice" role="status">{notice}</div>}{error && <div className="notice error" role="alert">{error}</div>}
       <form className="panel consultation-form" onSubmit={(event) => { event.preventDefault(); void saveConsultation(consultation.status) }}><label>Chief complaint<input value={chiefComplaint} onChange={(event) => setChiefComplaint(event.target.value)} placeholder="Reason for today’s visit" /></label><label>Clinical notes<textarea value={clinicalNotes} onChange={(event) => setClinicalNotes(event.target.value)} placeholder="History, examination findings, assessment, and plan" rows={8} /></label><label>Diagnosis<textarea value={diagnosis} onChange={(event) => setDiagnosis(event.target.value)} placeholder="Clinical diagnosis" rows={3} /></label><label>Instructions<textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} placeholder="Home care and follow-up instructions" rows={3} /></label><section className="prescription-editor"><div className="panel-heading"><div><p className="eyebrow">Prescription</p><h2>Medication directions</h2>{consultation.prescriptionLastUpdatedAt && <p className="prescription-updated">Last updated {new Date(consultation.prescriptionLastUpdatedAt).toLocaleString()}</p>}</div><button className="icon-button" type="button" onClick={addPrescriptionItem} aria-label="Add medication"><Plus size={18} /></button></div>{prescriptionItems.map((item, index) => <div className="prescription-item" key={item.id ?? index}><input value={item.medicationName} onChange={(event) => updatePrescriptionItem(index, 'medicationName', event.target.value)} placeholder="Medication" /><select value={item.presentation} onChange={(event) => updatePrescriptionItem(index, 'presentation', event.target.value)}><option>Tablet</option><option>Capsule</option><option>Suspension</option><option>Injection</option><option>Topical</option><option>Other</option></select><input value={item.concentration} onChange={(event) => updatePrescriptionItem(index, 'concentration', event.target.value)} placeholder="Concentration" /><input value={item.dosageDirections} onChange={(event) => updatePrescriptionItem(index, 'dosageDirections', event.target.value)} placeholder="Dosage and directions" /><button className="icon-button" type="button" onClick={() => removePrescriptionItem(index)} aria-label="Remove medication"><Trash2 size={16} /></button></div>)}{!prescriptionItems.length && <p className="empty-state">Add a medication when a prescription is needed.</p>}</section><div className="form-actions"><button className="secondary-action" type="submit"><Save size={17} /> {consultation.status === 'Completed' ? 'Save prescription changes' : 'Save progress'}</button>{consultation.status === 'Completed' && <Link className="secondary-action" to={`/consultations/${consultation.id}/prescription`}><FileOutput size={17} /> Print prescription</Link>}<button className="primary-action" type="button" disabled={consultation.status === 'Completed'} onClick={() => void saveConsultation('Completed')}><Stethoscope size={18} /> Complete consultation</button></div></form>
     </>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { CalendarDays, Pencil, Save } from 'lucide-react'
+import { CalendarDays, Pencil, Save, Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { apiFetch, type Patient, type ScheduleAppointment, getJson } from '../api'
 
@@ -26,6 +26,8 @@ export function AppointmentsPage() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [selectedAppointment, setSelectedAppointment] = useState<ScheduleAppointment | null>(null)
   const [patientId, setPatientId] = useState('')
+  const [patientQuery, setPatientQuery] = useState('')
+  const [isPatientListOpen, setIsPatientListOpen] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [reason, setReason] = useState('')
@@ -55,9 +57,16 @@ export function AppointmentsPage() {
       .catch(() => setError('Patients could not be loaded.'))
   }, [])
 
+  const selectedPatient = patients.find((patient) => patient.id === patientId)
+  const matchingPatients = patients.filter((patient) => {
+    const query = patientQuery.trim().toLowerCase()
+    return !query || [patient.name, patient.guardianName, patient.guardianPhone].some((value) => value.toLowerCase().includes(query))
+  })
+
   function selectAppointment(appointment: ScheduleAppointment) {
     setSelectedAppointment(appointment)
     setPatientId(appointment.patientId)
+    setPatientQuery('')
     setDate(appointment.startsAt.slice(0, 10))
     setTime(appointment.startsAt.slice(11, 16))
     setReason(appointment.reason)
@@ -109,7 +118,7 @@ export function AppointmentsPage() {
         </section>
         <form className="panel appointment-form" onSubmit={(event) => void saveAppointment(event)}>
           <div className="panel-heading"><div><p className="eyebrow">Appointment details</p><h2>{selectedAppointment ? 'Edit appointment' : 'Select an appointment'}</h2></div><Pencil size={22} /></div>
-          {selectedAppointment ? <><label>Patient<select value={patientId} onChange={(event) => setPatientId(event.target.value)}>{patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} - {patient.guardianName}</option>)}</select></label><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label><label>Time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></label><label>Reason<select value={reason} onChange={(event) => setReason(event.target.value)}>{appointmentReasons.map((appointmentReason) => <option key={appointmentReason} value={appointmentReason}>{appointmentReason}</option>)}</select></label><label>Clinician<input value={clinicianName} onChange={(event) => setClinicianName(event.target.value)} required /></label><button className="primary-action" type="submit"><Save size={18} /> Save changes</button></> : <p className="empty-state">Choose an appointment from the list to view and edit it.</p>}
+          {selectedAppointment ? <><label>Patient<div className="patient-combobox"><div className="search-field"><Search size={16} /><input value={patientQuery} onChange={(event) => { setPatientQuery(event.target.value); setIsPatientListOpen(true) }} onFocus={() => setIsPatientListOpen(true)} placeholder={selectedPatient ? `${selectedPatient.name} - ${selectedPatient.guardianName}` : 'Search pet, guardian, or phone'} role="combobox" aria-expanded={isPatientListOpen} aria-controls="appointments-patient-options" aria-autocomplete="list" /></div>{isPatientListOpen && <div className="patient-options" id="appointments-patient-options" role="listbox">{matchingPatients.map((patient) => <button type="button" role="option" aria-selected={patient.id === patientId} key={patient.id} onClick={() => { setPatientId(patient.id); setPatientQuery(''); setIsPatientListOpen(false) }}><strong>{patient.name}</strong><span>{patient.guardianName} · {patient.guardianPhone}</span></button>)}{!matchingPatients.length && <p className="empty-state">No patients match this search.</p>}</div>}</div></label><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label><label>Time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></label><label>Reason<select value={reason} onChange={(event) => setReason(event.target.value)}>{appointmentReasons.map((appointmentReason) => <option key={appointmentReason} value={appointmentReason}>{appointmentReason}</option>)}</select></label><label>Clinician<input value={clinicianName} onChange={(event) => setClinicianName(event.target.value)} required /></label><button className="primary-action" type="submit"><Save size={18} /> Save changes</button></> : <p className="empty-state">Choose an appointment from the list to view and edit it.</p>}
         </form>
       </section>
     </>
