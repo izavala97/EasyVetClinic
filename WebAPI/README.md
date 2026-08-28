@@ -20,7 +20,7 @@ The API listens at `http://localhost:5120` in the HTTP development profile.
 
 ## Local Database
 
-The Development environment uses SQLite. On application startup, EF Core applies pending migrations and creates `easyvetclinic.db` in the `WebAPI` directory. No sample clinic, user, patient, guardian, appointment, consultation, inventory, or sale data is seeded.
+The Development environment uses SQLite. On application startup, EF Core applies any pending migrations and creates `easyvetclinic.db` in the `WebAPI` directory. No sample clinic, user, patient, guardian, appointment, consultation, inventory, or sale data is seeded.
 
 To reset it to an empty schema, stop the API and run this command from the repository root:
 
@@ -28,14 +28,15 @@ To reset it to an empty schema, stop the API and run this command from the repos
 .\scripts\start-dev.ps1 -ResetDatabase
 ```
 
-The `ClinicDatabase` connection string and `Database:Provider` are configured in [appsettings.json](appsettings.json). Local development defaults to `Sqlite`. EF Core creates and updates the SQLite file automatically when the API starts; do not run a SQL script locally.
+The `ClinicDatabase` connection string and `Database:Provider` are configured in [appsettings.json](appsettings.json). Local development defaults to `Sqlite`. EF Core creates and updates the SQLite file automatically when the API starts.
 
 ## Migrations
 
 The provider-specific migration paths are intentional:
 
 - `Data/Migrations/` contains SQLite migrations for local development. `ClinicDbContextFactory` ensures `dotnet ef` commands targeting `ClinicDbContext` use SQLite.
-- `Data/SqlServerMigrations/` contains SQL Server migrations for Azure SQL production. They must be applied through a controlled deployment process, never by the API at production startup.
+- `Data/SqlServerMigrations/` contains SQL Server migrations for Azure SQL production.
+- The API applies pending EF Core migrations at startup for both providers, so database schema updates happen automatically on each deploy.
 
 Create a local SQLite migration after changing the EF model:
 
@@ -57,6 +58,10 @@ dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/
 | `GET` | `/api/dashboard` | Active clinic dashboard summary. |
 | `GET` | `/api/patients?query=` | Search patients by pet, guardian, or phone number. |
 | `GET` | `/api/patients/{patientId}` | Retrieve a patient summary. |
+| `GET` | `/api/appointments?date=` | Retrieve appointments for a day; use `year` and `month` for a calendar month. |
+| `POST` | `/api/appointments` | Create an appointment; returns `409 Conflict` when the time is already booked. |
+| `PUT` | `/api/appointments/{appointmentId}` | Update an appointment; prevents conflicts with another appointment at the same time. |
+| `POST` | `/api/sales` | Complete an inventory-product and/or manual-service sale. |
 | `POST` | `/api/patients/{patientId}/consultations` | Create an in-progress consultation. |
 | `GET` | `/api/patients/{patientId}/documents/{documentType}` | Prepare a clinical document draft. |
 
@@ -70,4 +75,4 @@ dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/
 
 ## Current State
 
-The API uses EF Core with SQLite for local development and a separate SQL Server migration history for production. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists.
+The API uses EF Core with SQLite for local development and a separate SQL Server migration history for production. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists. The API currently exposes product listing but not inventory product administration; create product records before using product sales.

@@ -18,7 +18,7 @@ All repository documentation and technical artifacts are written in English. Sou
 
 ## Current Implementation
 
-The current vertical slice includes an operational dashboard, patient search, consultation creation, and document draft preparation for health certificates, surgical consent, and boarding contracts. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
+The current vertical slice includes an operational dashboard, patient and multi-guardian management, consultation creation, document draft preparation for health certificates, surgical consent, and boarding contracts. Scheduling provides monthly and daily calendar views, prevents time collisions, and lets staff edit an appointment from its schedule or dashboard row. Point of sale supports inventory products and manually priced service charges; product stock is decremented only for inventory lines. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
 
 The Azure App Service API and Azure Static Web App deployment resources are configured through GitHub Actions. The API now exposes authenticated initial-clinic onboarding and uses SQLite locally, with a separate SQL Server EF Core migration set for production. External ID/Easy Auth browser sign-in, signed PDF generation, private file storage, and complete operational modules remain before production go-live. See [DEPLOYMENT.MD](DEPLOYMENT.MD) for the Azure configuration checklist.
 

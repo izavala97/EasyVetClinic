@@ -61,9 +61,9 @@ This checklist describes the Azure resources and configuration needed before pro
 - A contained database user for the App Service managed identity with required application permissions.
 - SQL networking that permits the App Service connection: use private networking for production, or temporarily enable the server's "Allow Azure services and resources to access this server" firewall option while private networking is not configured.
 - Production backup retention, geo-redundancy, and sizing decisions.
-- A deployment migration process that runs before the application release, not at API startup.
-- Generate and apply the SQL Server EF Core migration script through the controlled release connection before enabling the SQL Server provider. Generate it with `dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/Apply-SqlServerMigrations.sql`; do not maintain a hand-written script or run schema migrations at API startup.
-- Create the managed identity database user as the SQL Entra administrator, then grant `db_datareader` and `db_datawriter` to that user. The application does not need schema-change permissions at runtime.
+- The API applies pending EF Core migrations at startup, so the database schema is updated automatically for each deployment.
+- You can still generate the SQL Server EF Core migration script for auditing or controlled release review with `dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/Apply-SqlServerMigrations.sql`.
+- Create the managed identity database user as the SQL Entra administrator, then grant `db_datareader` and `db_datawriter` to that user. The application does not need schema-change permissions at runtime because migrations run through the app startup path.
 - Set these App Service settings together after the migration succeeds:
 	- `Database__Provider=SqlServer`
 	- `ConnectionStrings__ClinicDatabase=Server=tcp:easyvetclinic-dbserver.database.windows.net,1433;Initial Catalog=easyvetclinic-database;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;`

@@ -15,9 +15,12 @@ During development, Vite proxies `/api` and `/health` to `http://localhost:5120`
 
 ## Current Experience
 
-- Clinic dashboard with appointment, patient, and boarding indicators.
-- Patient search by patient name, guardian name, or phone number.
+- Clinic dashboard with appointment, patient, and boarding indicators, including all appointments for today and tomorrow.
+- Patient search by patient name, guardian name, or phone number, plus multiple linked guardians per patient.
+- Monthly and daily scheduling calendar with time-conflict prevention; click an appointment row to open its editor.
+- Appointment editing for patient, date, time, reason, and clinician.
 - Consultation creation from the selected patient record.
+- Point of sale for stocked products and manually priced services, with optional patient association and payment method selection.
 - Access to health certificate, surgical consent, and boarding contract drafts.
 
 ## Conventions

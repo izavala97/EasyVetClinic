@@ -78,9 +78,8 @@ app.Use(async (context, next) =>
 	}
 });
 
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-	using var scope = app.Services.CreateScope();
 	var dbContext = scope.ServiceProvider.GetRequiredService<ClinicDbContext>();
 	await dbContext.Database.MigrateAsync();
 }
