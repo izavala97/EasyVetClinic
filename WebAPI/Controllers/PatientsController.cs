@@ -16,8 +16,9 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
     private string ClinicId => currentClinic.Id;
 
     [HttpGet("patients")]
-    public async Task<ActionResult<IReadOnlyList<PatientSummary>>> GetPatients([FromQuery] string? query)
+    public async Task<ActionResult<IReadOnlyList<PatientSummary>>> GetPatients([FromQuery] string? query, [FromQuery] int? skip, [FromQuery] int? take)
     {
+        if (skip is < 0 || take is < 1 or > 200) return ValidationProblem("Skip must be non-negative and take must be between 1 and 200.");
         var patients = dbContext.Patients
             .AsNoTracking()
             .Include(patient => patient.Guardian)
@@ -30,10 +31,13 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
             patients = patients.Where(patient =>
                 patient.Name.Contains(query) ||
                 patient.Guardian.Name.Contains(query) ||
-                patient.Guardian.Phone.Contains(query));
+                patient.Guardian.Phone.Contains(query) ||
+                patient.PatientGuardians.Any(link => link.Guardian.Name.Contains(query) || link.Guardian.Phone.Contains(query)));
         }
 
-        var patientRecords = await patients.OrderBy(patient => patient.Name).ToListAsync();
+        var ordered = patients.OrderBy(patient => patient.Name).ThenBy(patient => patient.Id).Skip(skip ?? 0);
+        if (take is not null) ordered = ordered.Take(take.Value);
+        var patientRecords = await ordered.ToListAsync();
         return Ok(patientRecords.Select(MapPatient).ToList());
     }
 
@@ -51,13 +55,13 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
     [HttpPost("patients")]
     public async Task<ActionResult<PatientSummary>> CreatePatient(CreatePatientRequest request)
     {
-        if (new[] { request.Name, request.Species, request.Breed, request.Sex, request.Weight, request.Color }.Any(string.IsNullOrWhiteSpace))
+        if (new[] { request.Name, request.Species }.Any(string.IsNullOrWhiteSpace))
         {
-            return ValidationProblem("Name, species, breed, sex, weight, and color are required.");
+            return ValidationProblem("Name and species are required.");
         }
 
-        var guardianIds = request.GuardianIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
-        if (guardianIds.Count == 0)
+        var guardianIds = (request.GuardianIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (guardianIds.Count == 0 && request.NewGuardian is null)
         {
             return ValidationProblem("At least one guardian is required.");
         }
@@ -69,21 +73,47 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
         {
             return NotFound();
         }
+        if (request.PrimaryGuardianId is not null && !guardianIds.Contains(request.PrimaryGuardianId))
+            return ValidationProblem("The primary guardian must be among the linked guardians.");
+        if (request.NewGuardian is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.NewGuardian.Name) || string.IsNullOrWhiteSpace(request.NewGuardian.Phone))
+                return ValidationProblem("The new guardian requires a name and phone.");
+            var phone = new string(request.NewGuardian.Phone.Where(char.IsDigit).ToArray());
+            var alternatePhone = new string((request.NewGuardian.AlternatePhone ?? "").Where(char.IsDigit).ToArray());
+            if (phone.Length == 0 || (!string.IsNullOrWhiteSpace(request.NewGuardian.AlternatePhone) && alternatePhone.Length == 0))
+                return ValidationProblem("Guardian phone numbers must contain digits.");
+            if (await dbContext.Guardians.AnyAsync(guardian => guardian.ClinicId == ClinicId && guardian.Phone == phone))
+                return Conflict(new ProblemDetails { Title = "A guardian with this phone already exists. Select the existing contact." });
+            var newGuardian = new Guardian
+            {
+                Id = Guid.NewGuid().ToString(), ClinicId = ClinicId, Name = request.NewGuardian.Name.Trim(), Phone = phone,
+                AlternatePhone = alternatePhone,
+                Address = request.NewGuardian.Address?.Trim() ?? "",
+                IdentityType = request.NewGuardian.IdentityType?.Trim() ?? "",
+                IdentityNumber = request.NewGuardian.IdentityNumber?.Trim() ?? "",
+                IdentityDocumentUrl = request.NewGuardian.IdentityDocumentUrl?.Trim() ?? ""
+            };
+            guardians.Add(newGuardian);
+            guardianIds.Add(newGuardian.Id);
+            dbContext.Guardians.Add(newGuardian);
+        }
+        var primaryGuardian = guardians.Single(guardian => guardian.Id == (request.PrimaryGuardianId ?? guardianIds[0]));
 
         var patient = new Patient
         {
             Id = Guid.NewGuid().ToString(),
             ClinicId = ClinicId,
-            GuardianId = guardians[0].Id,
+            GuardianId = primaryGuardian.Id,
             Name = request.Name.Trim(),
             Species = request.Species.Trim(),
-            Breed = request.Breed.Trim(),
-            Sex = request.Sex.Trim(),
-            Weight = request.Weight.Trim(),
-            Color = request.Color.Trim(),
-            Allergies = request.Allergies.Trim()
+            Breed = request.Breed?.Trim() ?? "",
+            Sex = request.Sex?.Trim() ?? "Unknown",
+            Weight = request.Weight?.Trim() ?? "",
+            Color = request.Color?.Trim() ?? "",
+            Allergies = request.Allergies?.Trim() ?? ""
         };
-        patient.Guardian = guardians[0];
+        patient.Guardian = primaryGuardian;
         dbContext.Patients.Add(patient);
         dbContext.PatientGuardians.AddRange(guardians.Select(guardian => new PatientGuardian
         {
@@ -92,6 +122,18 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
         }));
         await dbContext.SaveChangesAsync();
         return Created($"api/patients/{patient.Id}", MapPatient(patient));
+    }
+
+    [HttpPut("patients/{patientId}/primary-guardian/{guardianId}")]
+    public async Task<IActionResult> SetPrimaryGuardian(string patientId, string guardianId)
+    {
+        var patient = await dbContext.Patients.SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
+        if (patient is null || !await dbContext.Guardians.AnyAsync(guardian => guardian.ClinicId == ClinicId && guardian.Id == guardianId) ||
+            !await dbContext.PatientGuardians.AnyAsync(link => link.PatientId == patientId && link.GuardianId == guardianId))
+            return NotFound();
+        patient.GuardianId = guardianId;
+        await dbContext.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpPost("patients/{patientId}/guardians/{guardianId}")]
@@ -138,9 +180,9 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
     [HttpPut("patients/{patientId}")]
     public async Task<ActionResult<PatientSummary>> UpdatePatient(string patientId, UpdatePatientRequest request)
     {
-        if (new[] { request.Name, request.Species, request.Breed, request.Sex, request.Weight, request.Color }.Any(string.IsNullOrWhiteSpace))
+        if (new[] { request.Name, request.Species }.Any(string.IsNullOrWhiteSpace))
         {
-            return ValidationProblem("Name, species, breed, sex, weight, and color are required.");
+            return ValidationProblem("Name and species are required.");
         }
 
         var patient = await dbContext.Patients.Include(candidate => candidate.Guardian)
@@ -181,9 +223,9 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
     [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
     public async Task<ActionResult<WeightRecordSummary>> CreateWeightRecord(string patientId, CreateWeightRecordRequest request)
     {
-        if (request.Value <= 0 || string.IsNullOrWhiteSpace(request.Unit) || string.IsNullOrWhiteSpace(request.RecordedBy))
+        if (request.Value <= 0 || request.Unit is not ("kg" or "lb") || string.IsNullOrWhiteSpace(request.RecordedBy))
         {
-            return ValidationProblem("A positive weight, unit, and recorded-by value are required.");
+            return ValidationProblem("A positive weight, kg or lb unit, and recorded-by value are required.");
         }
 
         var patient = await dbContext.Patients.SingleOrDefaultAsync(candidate => candidate.ClinicId == ClinicId && candidate.Id == patientId);
@@ -202,7 +244,10 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
             MeasuredOn = request.MeasuredOn,
             RecordedBy = request.RecordedBy.Trim()
         };
-        patient.Weight = $"{record.Value:0.##} {record.Unit}";
+        var latest = await dbContext.WeightRecords.Where(candidate => candidate.ClinicId == ClinicId && candidate.PatientId == patientId)
+            .MaxAsync(candidate => (DateOnly?)candidate.MeasuredOn);
+        if (latest is null || record.MeasuredOn >= latest)
+            patient.Weight = $"{record.Value:0.##} {record.Unit}";
         dbContext.WeightRecords.Add(record);
         await dbContext.SaveChangesAsync();
         return Created($"api/patients/{patient.Id}/weights/{record.Id}", new WeightRecordSummary(record.Id, record.Value, record.Unit, record.MeasuredOn, record.RecordedBy));
@@ -224,7 +269,8 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
     [RequireClinicRole(ClinicRoles.ClinicAdmin, ClinicRoles.Veterinarian)]
     public async Task<ActionResult<VaccinationRecordSummary>> CreateVaccinationRecord(string patientId, CreateVaccinationRecordRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.VaccineName) || string.IsNullOrWhiteSpace(request.VeterinarianName))
+        if (string.IsNullOrWhiteSpace(request.VaccineName) || string.IsNullOrWhiteSpace(request.VeterinarianName) ||
+            request.NextDueOn < request.AdministeredOn)
         {
             return ValidationProblem("Vaccine name and veterinarian name are required.");
         }
@@ -294,7 +340,8 @@ public sealed class PatientsController(ClinicDbContext dbContext, CurrentClinic 
             ["Date"] = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd")
         };
 
-        return Ok(new DocumentDraft(documentType, title, patient.Name, patient.Guardian.Name, "MVZ. Alondra Licona", fields));
+        return Ok(new DocumentDraft(documentType, title, patient.Name, patient.Guardian.Name,
+            User.FindFirst("name")?.Value ?? User.Identity?.Name ?? "Clinic staff", fields));
     }
 
     private static PatientSummary MapPatient(Patient patient) => new(

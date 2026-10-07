@@ -18,7 +18,11 @@ All repository documentation and technical artifacts are written in English. Sou
 
 ## Current Implementation
 
-The current vertical slice includes an operational dashboard, patient and multi-guardian management, consultation creation, document draft preparation for health certificates, surgical consent, and boarding contracts. Scheduling provides monthly and daily calendar views, prevents time collisions, and lets staff edit an appointment from its schedule or dashboard row. Point of sale supports inventory products and manually priced service charges; product stock is decremented only for inventory lines. Local SQLite schemas are created through EF Core migrations; the repository does not seed test clinics, users, patients, guardians, appointments, inventory, or consultations.
+The first workflow redesign connects clinical consultations to persisted billing accounts, product/service catalogs, explicit inventory fulfillment, and checkout. Catalog items can be maintained and archived through the application. Payments and physical stock movements are separate: prescribing or collecting payment does not consume inventory. Checkout supports partial payments, multiple methods, and printable receipts.
+
+Patient intake can create a guardian and patient together. Patient records expose structured weights and vaccination history, linked contacts, and primary-guardian selection. Scheduling supports clinician-specific overlapping-interval checks, visit duration, check-in/cancellation/no-show status, clinic-local time zones, and linked consultations. Finalized clinical records are retained; corrections use attributed amendments instead of overwriting or deleting history.
+
+SQLite and SQL Server use additive EF Core migrations. This implementation does not reset existing databases or seed operational data. Read [Clinical and commercial workflows](docs/WORKFLOWS.md) for state transitions, permissions, and first-release boundaries.
 
 The Azure App Service API and Azure Static Web App deployment resources are configured through GitHub Actions. The API uses SQLite locally, with a separate SQL Server EF Core migration set for production. Entra External ID browser sign-in, owner-only clinic registration, clinic staff administration, and manual subscription suspension are implemented. Signed PDF generation, private file storage, automatic billing integration, and complete operational modules remain before production go-live. See [DEPLOYMENT.MD](DEPLOYMENT.MD) for the Azure configuration checklist.
 
@@ -28,7 +32,7 @@ The Azure App Service API and Azure Static Web App deployment resources are conf
 - **Clinic administrator:** manages only their selected clinic's profile, invitations, and members. Can assign `ClinicAdmin`, `Veterinarian`, or `Staff`, change roles, or deactivate/reactivate members. The last active clinic administrator cannot be removed or demoted.
 - **Invitation flow:** the owner registers a clinic, opens its support workspace, and invites its first administrator from **Clinic administration**. That administrator subsequently invites staff. Invitations are single-use, expire after seven days, and can be revoked. The link is shown only when created and must be shared manually; no email service is configured. Recipients sign in with the invited, verified email address and explicitly accept.
 - **Unassigned users:** see an access-required screen, not clinic registration. Account details displays their Entra object ID for owner configuration.
-- **Multiple clinics:** select an authorized clinic in the sidebar. Selection is per browser session in memory and checked by the API on every operational request.
+- **Multiple clinics:** select an authorized clinic in the sidebar. Selection is retained in tab-scoped session storage across refresh and checked by the API on every operational request. Unsaved clinical changes are guarded before leaving or switching workspaces.
 - **Suspension:** manually suspend a clinic with a reason from **Platform administration**. Members lose all operational API access on their next request, including staff administration and invitation acceptance. Data and memberships are retained. The platform owner retains support access. No payment-provider webhook or automatic subscription calculation is implemented.
 - Administrative changes and owner support requests are logged without invitation tokens. Invitation tokens are stored hashed in the database and kept out of URL query strings.
 
@@ -61,10 +65,16 @@ dotnet build EasyVetClinic.slnx
 
 Set-Location WebClient
 npm run build
+npm run lint
+npm test
 ```
 
 Administration integration checks (isolated temporary SQLite database, no production data):
 
 ```powershell
 .\scripts\test-administration.ps1
+.\scripts\test-clinical-workflow.ps1
+.\scripts\test-commerce.ps1
 ```
+
+The integration scripts use temporary databases and stop their own API processes during cleanup. They do not deploy or modify the normal local database. The workflow verification CI runs these scripts plus client build, lint, and utility tests.

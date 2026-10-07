@@ -1,92 +1,150 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, FileOutput, Plus, Save, Stethoscope, Trash2 } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useBlocker, useParams } from 'react-router-dom'
 import { useAuthentication } from '../auth'
-import { apiFetch, type Consultation, type PrescriptionItem, getJson } from '../api'
+import { apiFetch, ensureSuccess, type Consultation, type PrescriptionItem, type Patient, getJson } from '../api'
+import { ConsultationCharges } from '../components/ConsultationCharges'
+import { registerWorkspaceGuard } from '../navigationGuard'
+
+type ClinicalDraft = {
+  chiefComplaint: string
+  clinicalNotes: string
+  diagnosis: string
+  instructions: string
+  prescriptionItems: PrescriptionItem[]
+}
+function toDraft(record: Consultation): ClinicalDraft {
+  return { chiefComplaint: record.chiefComplaint, clinicalNotes: record.clinicalNotes, diagnosis: record.diagnosis,
+    instructions: record.instructions, prescriptionItems: record.prescriptionItems }
+}
 
 export function ConsultationPage() {
   const { consultationId } = useParams()
+  const { currentUser } = useAuthentication()
   const [consultation, setConsultation] = useState<Consultation | null>(null)
-  const [chiefComplaint, setChiefComplaint] = useState('')
-  const [clinicalNotes, setClinicalNotes] = useState('')
-  const [diagnosis, setDiagnosis] = useState('')
-  const [instructions, setInstructions] = useState('')
-  const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([])
+  const [patient, setPatient] = useState<Patient | null>(null)
+  const [draft, setDraft] = useState<ClinicalDraft | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
-  const { currentUser } = useAuthentication()
+  const [pending, setPending] = useState(false)
+  const [reason, setReason] = useState('')
+  const [amendment, setAmendment] = useState('')
+  const clinicalAccess = ['ClinicAdmin', 'Veterinarian', 'SuperAdmin'].includes(currentUser?.role ?? '')
+  const editable = clinicalAccess && consultation?.status === 'InProgress'
+  const dirty = editable && !!consultation && !!draft && JSON.stringify(draft) !== JSON.stringify(toDraft(consultation))
+  const blocker = useBlocker(dirty || pending)
+
+  useEffect(() => registerWorkspaceGuard(() => !pending && (!dirty ||
+    window.confirm('Discard unsaved clinical changes and leave this clinic workspace?'))), [dirty, pending])
 
   useEffect(() => {
-    if (!consultationId) return
-    void getJson<Consultation>(`/api/consultations/${consultationId}`).then((data) => {
-      setConsultation(data)
-      setChiefComplaint(data.chiefComplaint)
-      setClinicalNotes(data.clinicalNotes)
-      setDiagnosis(data.diagnosis)
-      setInstructions(data.instructions)
-      setPrescriptionItems(data.prescriptionItems)
-    }).catch(() => setError('This consultation could not be found.'))
+    const warn = (event: BeforeUnloadEvent) => { if (dirty || pending) { event.preventDefault(); event.returnValue = '' } }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty, pending])
+
+  useEffect(() => {
+    let active = true
+    setConsultation(null)
+    setPatient(null)
+    setDraft(null)
+    setError('')
+    if (consultationId) void getJson<Consultation>(`/api/consultations/${consultationId}`).then(async (data) => {
+      const patientRecord = await getJson<Patient>(`/api/patients/${data.patientId}`)
+      if (active) { setConsultation(data); setDraft(toDraft(data)); setPatient(patientRecord) }
+    }).catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : 'Consultation could not be loaded.') })
+    return () => { active = false }
   }, [consultationId])
 
-  async function saveConsultation(status: Consultation['status']) {
-    if (!consultation) return
-    setError('')
+  async function save(status: 'InProgress' | 'Completed') {
+    if (!consultation || !draft || pending || !editable) return
+    if (status === 'Completed' && !window.confirm('Finalize the clinical record? Future corrections will be amendments. Payment can remain pending.')) return
+    setPending(true); setError(''); setNotice('')
     try {
-      const response = await apiFetch(`/api/consultations/${consultation.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chiefComplaint, clinicalNotes, diagnosis, instructions, status, prescriptionItems }) })
-      if (!response.ok) throw new Error()
+      const response = await apiFetch(`/api/consultations/${consultation.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...draft, status, expectedVersion: consultation.version }),
+      })
+      await ensureSuccess(response)
       const updated = await response.json() as Consultation
-      setConsultation(updated)
-      setNotice(status === 'Completed' ? 'Consultation completed.' : 'Consultation progress saved.')
-    } catch {
-      setError('The consultation could not be saved.')
-    }
+      setConsultation(updated); setDraft(toDraft(updated))
+      setNotice(status === 'Completed' ? 'Clinical record finalized. Charges and payment are managed separately.' : 'All clinical changes saved.')
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The record could not be saved.') }
+    finally { setPending(false) }
   }
 
-  if (error && !consultation) return <><Link className="back-link" to="/patients"><ArrowLeft size={16} /> Back to patients</Link><div className="notice error" role="alert">{error}</div></>
-  if (!consultation) return <p className="loading-state">Loading consultation...</p>
-
-  function addPrescriptionItem() {
-    setPrescriptionItems((items) => [...items, { medicationName: '', presentation: 'Tablet', concentration: '', dosageDirections: '', sortOrder: items.length }])
-  }
-
-  function updatePrescriptionItem(index: number, field: keyof PrescriptionItem, value: string) {
-    setPrescriptionItems((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item))
-  }
-
-  function removePrescriptionItem(index: number) {
-    setPrescriptionItems((items) => items.filter((_, itemIndex) => itemIndex !== index).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))
-  }
-
-  async function deleteConsultation() {
-    if (!consultation) return
-    const isClinicOwner = currentUser?.role === 'ClinicAdmin' || currentUser?.role === 'SuperAdmin'
-    const canDelete = consultation.status !== 'Completed' || isClinicOwner
-    if (!canDelete) return
-
-    const confirmed = window.confirm(consultation.status === 'Completed'
-      ? 'Delete this completed consultation? This action cannot be undone.'
-      : 'Delete this in-progress consultation? This action cannot be undone.')
-    if (!confirmed) return
-
-    setError('')
+  async function transition(action: 'cancel' | 'amendments') {
+    if (!consultation || pending) return
+    if (action === 'cancel' && !window.confirm(`${dirty ? 'Unsaved clinical changes will be discarded. ' : ''}Cancel this clinical visit? Financial charges are retained and must be reviewed separately.`)) return
+    setPending(true); setError('')
     try {
-      const response = await apiFetch(`/api/consultations/${consultation.id}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error()
-      setNotice('Consultation deleted.')
-      window.location.assign(`/patients/${consultation.patientId}`)
-    } catch {
-      setError('The consultation could not be deleted.')
-    }
+      const response = await apiFetch(`/api/consultations/${consultation.id}/${action}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, note: amendment, expectedVersion: consultation.version }),
+      })
+      await ensureSuccess(response)
+      const updated = await getJson<Consultation>(`/api/consultations/${consultation.id}`)
+      setConsultation(updated); setDraft(toDraft(updated)); setReason(''); setAmendment('')
+      setNotice(action === 'cancel' ? 'Visit cancelled. Clinical history retained.' : 'Attributed amendment recorded.')
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The action could not be completed.') }
+    finally { setPending(false) }
   }
 
-  const canDeleteConsultation = consultation.status !== 'Completed' || (currentUser?.role === 'ClinicAdmin' || currentUser?.role === 'SuperAdmin')
+  function changeItem(index: number, field: keyof PrescriptionItem, value: string) {
+    setDraft(current => current && ({ ...current, prescriptionItems: current.prescriptionItems.map((item, position) =>
+      position === index ? { ...item, [field]: value } : item) }))
+  }
 
-  return (
-    <>
-      <Link className="back-link" to={`/patients/${consultation.patientId}`}><ArrowLeft size={16} /> Back to {consultation.patientName}</Link>
-      <header className="page-header"><div><p className="eyebrow">{consultation.status === 'Completed' ? 'Completed consultation' : 'Active consultation'}</p><h1>{consultation.patientName}</h1><p className="consultation-subtitle">Guardian: {consultation.guardianName} · {consultation.clinicianName}</p></div><div className="header-actions"><Stethoscope size={26} />{canDeleteConsultation && <button className="secondary-action danger" type="button" onClick={() => void deleteConsultation()}><Trash2 size={16} /> Delete</button>}</div></header>
-      {notice && <div className="notice" role="status">{notice}</div>}{error && <div className="notice error" role="alert">{error}</div>}
-      <form className="panel consultation-form" onSubmit={(event) => { event.preventDefault(); void saveConsultation(consultation.status) }}><label>Chief complaint<input value={chiefComplaint} onChange={(event) => setChiefComplaint(event.target.value)} placeholder="Reason for today’s visit" /></label><label>Clinical notes<textarea value={clinicalNotes} onChange={(event) => setClinicalNotes(event.target.value)} placeholder="History, examination findings, assessment, and plan" rows={8} /></label><label>Diagnosis<textarea value={diagnosis} onChange={(event) => setDiagnosis(event.target.value)} placeholder="Clinical diagnosis" rows={3} /></label><label>Instructions<textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} placeholder="Home care and follow-up instructions" rows={3} /></label><section className="prescription-editor"><div className="panel-heading"><div><p className="eyebrow">Prescription</p><h2>Medication directions</h2>{consultation.prescriptionLastUpdatedAt && <p className="prescription-updated">Last updated {new Date(consultation.prescriptionLastUpdatedAt).toLocaleString()}</p>}</div><button className="icon-button" type="button" onClick={addPrescriptionItem} aria-label="Add medication"><Plus size={18} /></button></div>{prescriptionItems.map((item, index) => <div className="prescription-item" key={item.id ?? index}><input value={item.medicationName} onChange={(event) => updatePrescriptionItem(index, 'medicationName', event.target.value)} placeholder="Medication" /><select value={item.presentation} onChange={(event) => updatePrescriptionItem(index, 'presentation', event.target.value)}><option>Tablet</option><option>Capsule</option><option>Suspension</option><option>Injection</option><option>Topical</option><option>Other</option></select><input value={item.concentration} onChange={(event) => updatePrescriptionItem(index, 'concentration', event.target.value)} placeholder="Concentration" /><input value={item.dosageDirections} onChange={(event) => updatePrescriptionItem(index, 'dosageDirections', event.target.value)} placeholder="Dosage and directions" /><button className="icon-button" type="button" onClick={() => removePrescriptionItem(index)} aria-label="Remove medication"><Trash2 size={16} /></button></div>)}{!prescriptionItems.length && <p className="empty-state">Add a medication when a prescription is needed.</p>}</section><div className="form-actions"><button className="secondary-action" type="submit"><Save size={17} /> {consultation.status === 'Completed' ? 'Save prescription changes' : 'Save progress'}</button>{consultation.status === 'Completed' && <Link className="secondary-action" to={`/consultations/${consultation.id}/prescription`}><FileOutput size={17} /> Print prescription</Link>}<button className="primary-action" type="button" disabled={consultation.status === 'Completed'} onClick={() => void saveConsultation('Completed')}><Stethoscope size={18} /> Complete consultation</button></div></form>
-    </>
-  )
+  if (!consultation || !draft) return <>{error ? <div className="notice error" role="alert">{error}</div> : <p>Loading consultation...</p>}</>
+  return <>
+    <Link className="back-link" to={`/patients/${consultation.patientId}`}><ArrowLeft size={16} /> Back to {consultation.patientName}</Link>
+    <header className="page-header"><div><p className="eyebrow">{consultation.status}</p><h1>{consultation.patientName}</h1>
+      <p>Guardian: {consultation.guardianName} · Clinician: {consultation.clinicianName}</p></div><Stethoscope size={26} /></header>
+    {patient && <section className="panel"><strong>Allergies: {patient.allergies.join(', ') || 'Unknown / not assessed'}</strong>
+      <p>Latest weight: {patient.weight || 'Not recorded'} · {patient.species} · Last visit: {patient.lastVisit || 'Not recorded'}</p></section>}
+    {notice && <div className="notice" role="status">{notice}</div>}
+    {error && <div className="notice error" role="alert">{error} <button type="button" onClick={() => window.location.reload()}>Reload current record</button></div>}
+    {blocker.state === 'blocked' && <section className="notice error" role="alertdialog" aria-label="Unsaved clinical changes">
+      {pending ? 'Wait for the clinical save to finish before leaving.' : 'You have unsaved clinical changes.'} <button type="button" onClick={() => blocker.reset()}>Keep editing</button>
+      <button type="button" disabled={pending} onClick={() => blocker.proceed()}>Discard and leave</button></section>}
+    <div className="clinical-workspace">
+      <form className="panel consultation-form" onSubmit={event => { event.preventDefault(); void save('InProgress') }}>
+        <p role="status">{pending ? 'Saving...' : dirty ? 'Unsaved changes' : 'Clinical record saved'}</p>
+        <fieldset disabled={!editable || pending}>
+          {(['chiefComplaint', 'clinicalNotes', 'diagnosis', 'instructions'] as const).map(field =>
+            <label key={field}>{({ chiefComplaint: 'Chief complaint', clinicalNotes: 'Clinical notes', diagnosis: 'Diagnosis', instructions: 'Home care and follow-up' })[field]}
+              <textarea rows={field === 'clinicalNotes' ? 8 : 3} value={draft[field]}
+                onChange={event => setDraft({ ...draft, [field]: event.target.value })} /></label>)}
+          <section className="prescription-editor"><div className="panel-heading"><h2>Prescription directions</h2>
+            <button type="button" className="secondary-action" onClick={() => setDraft({ ...draft,
+              prescriptionItems: [...draft.prescriptionItems, { medicationName: '', presentation: 'Tablet', concentration: '', dosageDirections: '', sortOrder: draft.prescriptionItems.length }] })}>
+              <Plus size={16} /> Medication</button></div>
+            <p>Prescribing does not sell or dispense medication. Add supplied items to Charges separately.</p>
+            {draft.prescriptionItems.map((item, index) => <div className="prescription-item" key={item.id ?? index}>
+              <input aria-label="Medication" value={item.medicationName} onChange={event => changeItem(index, 'medicationName', event.target.value)} required />
+              <input aria-label="Presentation" value={item.presentation} onChange={event => changeItem(index, 'presentation', event.target.value)} required />
+              <input aria-label="Concentration" value={item.concentration} onChange={event => changeItem(index, 'concentration', event.target.value)} />
+              <input aria-label="Dosage directions" value={item.dosageDirections} onChange={event => changeItem(index, 'dosageDirections', event.target.value)} required />
+              <button className="icon-button" type="button" aria-label="Remove medication" onClick={() => setDraft({ ...draft, prescriptionItems: draft.prescriptionItems.filter((_, position) => position !== index).map((value, position) => ({ ...value, sortOrder: position })) })}><Trash2 size={16} /></button>
+            </div>)}
+          </section>
+          <div className="form-actions"><button className="secondary-action" type="submit"><Save size={16} /> Save progress</button>
+            <button className="primary-action" type="button" onClick={() => void save('Completed')}>Complete clinical care</button></div>
+        </fieldset>
+        {consultation.status === 'Completed' && <Link className="secondary-action" to={`/consultations/${consultation.id}/prescription`}><FileOutput size={16} /> Print prescription</Link>}
+      </form>
+      <ConsultationCharges consultationId={consultation.id} patientId={consultation.patientId} />
+    </div>
+    {consultation.cancellationReason && <div className="notice">Cancellation: {consultation.cancellationReason}</div>}
+    {clinicalAccess && consultation.status !== 'Cancelled' && <section className="panel clinical-entry-form">
+      <h2>{consultation.status === 'Completed' ? 'Add a clinical amendment' : 'Cancel visit'}</h2>
+      <label>Reason<input value={reason} maxLength={1000} onChange={event => setReason(event.target.value)} /></label>
+      {consultation.status === 'Completed' && <label>Amendment note<textarea value={amendment} maxLength={10000} onChange={event => setAmendment(event.target.value)} /></label>}
+      <button className="secondary-action" type="button" disabled={pending || !reason.trim() || (consultation.status === 'Completed' && !amendment.trim())}
+        onClick={() => void transition(consultation.status === 'Completed' ? 'amendments' : 'cancel')}>
+        {consultation.status === 'Completed' ? 'Record amendment' : 'Cancel and retain record'}</button>
+    </section>}
+    {!!consultation.amendments.length && <section className="panel"><h2>Amendment history</h2>{consultation.amendments.map(item =>
+      <article key={item.id}><strong>{item.authorName} · {new Date(item.createdAt).toLocaleString()}</strong><p>{item.reason}</p><p>{item.note}</p></article>)}</section>}
+  </>
 }

@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   PawPrint,
   ShoppingBag,
+  Package,
+  Boxes,
   LogIn,
   LogOut,
   Shield,
@@ -40,12 +42,14 @@ function App() {
         {currentUser.clinics.length > 0 && <label className="clinic-selector">Clinic workspace<select aria-label="Clinic workspace" value={currentUser.clinicId ?? ''} onChange={(event) => void selectClinic(event.target.value || null)}><option value="">Select a clinic</option>{currentUser.clinics.map(clinic => <option key={clinic.clinicId} value={clinic.clinicId}>{clinic.clinicName}{clinic.isSuspended ? ' (suspended)' : ''}</option>)}</select></label>}
         <nav aria-label="Primary navigation">
           {!blocked && <>
-          <NavLink end to="/"><LayoutDashboard size={18} /> Dashboard</NavLink>
+          <NavLink end to="/"><LayoutDashboard size={18} /> Today</NavLink>
           <NavLink to="/patients"><PawPrint size={18} /> Patients</NavLink>
           <NavLink to="/consultations"><ClipboardList size={18} /> Consultations</NavLink>
           <NavLink to="/schedule"><CalendarDays size={18} /> Schedule</NavLink>
           <NavLink to="/documents"><FileText size={18} /> Documents</NavLink>
-          <NavLink to="/point-of-sale"><ShoppingBag size={18} /> Point of sale</NavLink>
+          <NavLink to="/checkout"><ShoppingBag size={18} /> Checkout</NavLink>
+          <NavLink to="/inventory"><Boxes size={18} /> Inventory</NavLink>
+          <NavLink to="/catalog"><Package size={18} /> Catalog</NavLink>
           <NavLink to="/clinic-profile"><Settings size={18} /> Clinic profile</NavLink>
           {clinicAdmin && <NavLink to="/clinic-admin"><Users size={18} /> Clinic administration</NavLink>}
           </>}

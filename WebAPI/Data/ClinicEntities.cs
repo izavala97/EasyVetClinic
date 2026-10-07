@@ -6,11 +6,10 @@ public sealed class Clinic
     public string Name { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string LogoUrl { get; set; } = string.Empty;
-    public string VeterinarianName { get; set; } = string.Empty;
-    public string VeterinarianTitles { get; set; } = string.Empty;
-    public string VeterinarianLicenseNumber { get; set; } = string.Empty;
     public bool IsSuspended { get; set; }
     public string SuspensionReason { get; set; } = string.Empty;
+    public string TimeZoneId { get; set; } = "UTC";
+    public int SchedulingVersion { get; set; }
     public List<Guardian> Guardians { get; } = [];
     public List<ClinicUser> Users { get; } = [];
     public List<Patient> Patients { get; } = [];
@@ -77,6 +76,11 @@ public sealed class Appointment
     public DateTimeOffset StartsAt { get; set; }
     public string Reason { get; set; } = string.Empty;
     public string ClinicianName { get; set; } = string.Empty;
+    public string ClinicianObjectId { get; set; } = string.Empty;
+    public int DurationMinutes { get; set; } = 30;
+    public string Status { get; set; } = "Scheduled";
+    public string? ConsultationId { get; set; }
+    public int Version { get; set; } = 1;
     public Clinic Clinic { get; set; } = null!;
     public Patient Patient { get; set; } = null!;
 }
@@ -93,8 +97,27 @@ public sealed class Consultation
     public string ClinicalNotes { get; set; } = string.Empty;
     public string Diagnosis { get; set; } = string.Empty;
     public string Instructions { get; set; } = string.Empty;
+    public string ClinicianObjectId { get; set; } = string.Empty;
+    public string ClinicianTitles { get; set; } = string.Empty;
+    public string ClinicianLicenseNumber { get; set; } = string.Empty;
+    public string CancellationReason { get; set; } = string.Empty;
+    public int Version { get; set; } = 1;
+    public List<ClinicalAmendment> Amendments { get; } = [];
     public Patient Patient { get; set; } = null!;
     public Prescription? Prescription { get; set; }
+}
+
+public sealed class ClinicalAmendment
+{
+    public string Id { get; set; } = string.Empty;
+    public string ConsultationId { get; set; } = string.Empty;
+    public string ClinicId { get; set; } = string.Empty;
+    public string AuthorObjectId { get; set; } = string.Empty;
+    public string AuthorName { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+    public Consultation Consultation { get; set; } = null!;
 }
 
 public sealed class WeightRecord
@@ -154,8 +177,15 @@ public sealed class Product
     public string ClinicId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string? Sku { get; set; }
+    public string Unit { get; set; } = "each";
     public decimal UnitPrice { get; set; }
-    public int StockOnHand { get; set; }
+    public decimal StockOnHand { get; set; }
+    public decimal LowStockThreshold { get; set; }
+    public bool TrackStock { get; set; } = true;
+    public bool IsFavorite { get; set; }
+    public bool IsArchived { get; set; }
+    public int Version { get; set; } = 1;
     public Clinic Clinic { get; set; } = null!;
 }
 
@@ -190,6 +220,8 @@ public sealed class ClinicUser
     public string EntraObjectId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Role { get; set; } = ClinicRoles.Staff;
+    public string ProfessionalTitles { get; set; } = string.Empty;
+    public string LicenseNumber { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public Clinic Clinic { get; set; } = null!;
 }

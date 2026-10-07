@@ -65,13 +65,27 @@ dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/
 | `DELETE` | `/api/clinic/invitations/{invitationId}` | Revoke an invitation in the selected clinic. |
 | `POST` | `/api/invitations/accept` | Accept a token with a matching verified email claim and create a clinic membership. |
 | `GET` | `/api/dashboard` | Active clinic dashboard summary. |
+| `GET` | `/api/operations/today` | Active care, pending accounts, low stock, and balances grouped by currency. |
 | `GET` | `/api/patients?query=` | Search patients by pet, guardian, or phone number. |
 | `GET` | `/api/patients/{patientId}` | Retrieve a patient summary. |
 | `GET` | `/api/appointments?date=` | Retrieve appointments for a day; use `year` and `month` for a calendar month. |
-| `POST` | `/api/appointments` | Create an appointment; returns `409 Conflict` when the time is already booked. |
-| `PUT` | `/api/appointments/{appointmentId}` | Update an appointment; prevents conflicts with another appointment at the same time. |
-| `POST` | `/api/sales` | Complete an inventory-product and/or manual-service sale. |
+| `POST` | `/api/appointments` | Create a clinician-specific visit with duration and clinic-local time; overlapping intervals return `409 Conflict`. |
+| `PUT` | `/api/appointments/{appointmentId}` | Update appointment lifecycle and scheduling using its expected version. |
+| `GET`, `POST`, `PUT`, `DELETE` | `/api/catalog/products`, `/api/catalog/services` | Clinic-scoped catalogs; DELETE archives an item and preserves historical charges. |
+| `GET`, `POST` | `/api/billing/accounts` | Find or create walk-in / consultation-linked accounts. |
+| `POST`, `PUT`, `DELETE` | `/api/billing/accounts/{id}/lines` | Draft charge entries with server-side prices and expected versions; PUT/DELETE include the line ID. |
+| `POST` | `/api/billing/accounts/{id}/open` | Lock current charges and open collection. |
+| `POST` | `/api/billing/accounts/{id}/payments` | Record partial/full payment independently of stock fulfillment. |
+| `POST` | `/api/billing/accounts/{id}/fulfill` | Explicitly record physical product fulfillment. |
+| `POST` | `/api/billing/accounts/{id}/refunds`, `/api/billing/accounts/{id}/void` | Controlled administrator corrections without automatic restocking. |
+| `GET` | `/api/inventory`, `/api/inventory/movements` | Stock balances and movement history. |
+| `POST` | `/api/inventory/adjustments` | Attributed stock adjustment with a reason. |
 | `POST` | `/api/patients/{patientId}/consultations` | Create an in-progress consultation. |
+| `PUT` | `/api/consultations/{id}` | Save or finalize clinical care using an expected version. |
+| `POST` | `/api/consultations/{id}/amendments`, `/api/consultations/{id}/cancel` | Preserve the clinical record while adding attributed corrections or cancellation. |
+| `GET`, `POST` | `/api/patients/{id}/weights`, `/api/patients/{id}/vaccinations` | Structured clinical timelines; recording is not billing or dispensing. |
+| `GET` | `/api/clinicians` | Active clinicians available for care and scheduling. |
+| `PUT` | `/api/clinicians/{objectId}/credentials` | Administrator-maintained professional credentials, snapshotted when care starts. |
 | `GET` | `/api/patients/{patientId}/documents/{documentType}` | Prepare a clinical document draft. |
 
 `documentType` supports `health-certificate`, `surgical-consent`, and `boarding-contract`.
@@ -88,4 +102,6 @@ The API uses EF Core with SQLite for local development and a separate SQL Server
 
 Invitations require matching authoritative `email`/`emails` claims on acceptance, retain only a hash of the token, and cannot grant platform ownership. They do not send email or create identity-provider accounts. See [the deployment checklist](../DEPLOYMENT.MD) for owner and verified-email configuration.
 
-The API currently exposes product listing but not inventory product administration; create product records before using product sales.
+Catalog and inventory administration are available through the application. Legacy sales remain historical records; new commercial workflows must use billing accounts rather than bypassing the inventory ledger.
+
+See [Clinical and commercial workflows](../docs/WORKFLOWS.md) for additive migrations, concurrency, verification commands, and first-release limitations.

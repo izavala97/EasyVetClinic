@@ -16,13 +16,17 @@ public sealed class GuardiansController(ClinicDbContext dbContext, CurrentClinic
     private string ClinicId => currentClinic.Id;
 
     [HttpGet("guardians")]
-    public async Task<ActionResult<IReadOnlyList<GuardianSummary>>> GetGuardians()
+    public async Task<ActionResult<IReadOnlyList<GuardianSummary>>> GetGuardians([FromQuery] string? query, [FromQuery] int? skip, [FromQuery] int? take)
     {
-        var guardians = await dbContext.Guardians
+        if (skip is < 0 || take is < 1 or > 200) return ValidationProblem("Skip must be non-negative and take must be between 1 and 200.");
+        var records = dbContext.Guardians
             .AsNoTracking()
-            .Where(guardian => guardian.ClinicId == ClinicId)
-            .OrderBy(guardian => guardian.Name)
-            .ToListAsync();
+            .Where(guardian => guardian.ClinicId == ClinicId);
+        if (!string.IsNullOrWhiteSpace(query)) records = records.Where(guardian =>
+            guardian.Name.Contains(query) || guardian.Phone.Contains(query) || guardian.AlternatePhone.Contains(query));
+        var ordered = records.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id).Skip(skip ?? 0);
+        if (take.HasValue) ordered = ordered.Take(take.Value);
+        var guardians = await ordered.ToListAsync();
         return Ok(guardians.Select(MapGuardian).ToList());
     }
 

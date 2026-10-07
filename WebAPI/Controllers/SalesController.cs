@@ -29,74 +29,11 @@ public sealed class SalesController(ClinicDbContext dbContext, CurrentClinic cur
     }
 
     [HttpPost("sales")]
-    public async Task<ActionResult<SaleReceipt>> CompleteSale(CheckoutRequest request)
-    {
-        if ((request.Lines.Count == 0 && request.ServiceLines.Count == 0) || string.IsNullOrWhiteSpace(request.PaymentMethod) || request.Lines.Any(line => line.Quantity <= 0) || request.ServiceLines.Any(line => string.IsNullOrWhiteSpace(line.Name) || line.UnitPrice <= 0))
+    public IActionResult CompleteSale() =>
+        StatusCode(StatusCodes.Status410Gone, new ProblemDetails
         {
-            return ValidationProblem("A payment method and at least one valid product or service line are required.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.PatientId) && !await dbContext.Patients.AnyAsync(patient => patient.ClinicId == ClinicId && patient.Id == request.PatientId))
-        {
-            return NotFound();
-        }
-
-        var requestedQuantities = request.Lines
-            .GroupBy(line => line.ProductId)
-            .ToDictionary(group => group.Key, group => group.Sum(line => line.Quantity));
-        var products = await dbContext.Products
-            .Where(product => product.ClinicId == ClinicId && requestedQuantities.Keys.Contains(product.Id))
-            .ToListAsync();
-
-        if (products.Count != requestedQuantities.Count || products.Any(product => product.StockOnHand < requestedQuantities[product.Id]))
-        {
-            return Conflict("One or more products are unavailable in the requested quantity.");
-        }
-
-        var sale = new Sale
-        {
-            Id = Guid.NewGuid().ToString(),
-            ClinicId = ClinicId,
-            PatientId = request.PatientId,
-            CompletedAt = DateTimeOffset.UtcNow,
-            PaymentMethod = request.PaymentMethod.Trim()
-        };
-
-        foreach (var product in products)
-        {
-            var quantity = requestedQuantities[product.Id];
-            product.StockOnHand -= quantity;
-            sale.Lines.Add(new SaleLine
-            {
-                Id = Guid.NewGuid().ToString(),
-                ProductId = product.Id,
-                ProductName = product.Name,
-                UnitPrice = product.UnitPrice,
-                Quantity = quantity
-            });
-        }
-
-        foreach (var service in request.ServiceLines)
-        {
-            sale.Lines.Add(new SaleLine
-            {
-                Id = Guid.NewGuid().ToString(),
-                ProductId = string.Empty,
-                ProductName = service.Name.Trim(),
-                UnitPrice = service.UnitPrice,
-                Quantity = 1
-            });
-        }
-
-        sale.Total = sale.Lines.Sum(line => line.UnitPrice * line.Quantity);
-        dbContext.Sales.Add(sale);
-        await dbContext.SaveChangesAsync();
-
-        return Created($"api/sales/{sale.Id}", new SaleReceipt(
-            sale.Id,
-            sale.CompletedAt,
-            sale.Total,
-            sale.PaymentMethod,
-            sale.Lines.Select(line => new SaleReceiptLine(line.ProductName, line.Quantity, line.UnitPrice)).ToList()));
-    }
+            Status = StatusCodes.Status410Gone,
+            Title = "Legacy checkout is no longer available.",
+            Detail = "Create an account through /api/billing/accounts, persist its catalog charge lines, open it, and record payments and fulfillment separately. This endpoint never changes stock."
+        });
 }

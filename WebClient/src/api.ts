@@ -6,6 +6,28 @@ export type Dashboard = {
   upcomingAppointments: { id: string; startsAt: string; time: string; patientName: string; reason: string; clinicianName: string }[]
 }
 
+export type OperationsToday = {
+  date: string
+  timeZoneId: string
+  currency: string
+  activeConsultations: number
+  pendingAccounts: number
+  outstandingBalance: number
+  lowStockProducts: number
+  balancesByCurrency: { currency: string; outstandingBalance: number }[]
+  consultations: {
+    id: string
+    patientId: string
+    patientName: string
+    guardianName: string
+    clinicianName: string
+    startedAt: string
+    status: string
+    version: number
+    billingAccountId: string | null
+  }[]
+}
+
 export type Patient = {
   id: string
   guardianId: string
@@ -41,9 +63,7 @@ export type ClinicProfile = {
   name: string
   address: string
   logoUrl: string
-  veterinarianName: string
-  veterinarianTitles: string
-  veterinarianLicenseNumber: string
+  timeZoneId: string
 }
 
 export type CurrentUser = {
@@ -67,7 +87,7 @@ export type ConsultationHistoryItem = {
   id: string
   startedAt: string
   clinicianName: string
-  status: 'InProgress' | 'Completed'
+  status: 'InProgress' | 'Completed' | 'Cancelled'
   diagnosis: string
 }
 
@@ -84,13 +104,18 @@ export type Consultation = {
   guardianName: string
   clinicianName: string
   startedAt: string
-  status: 'InProgress' | 'Completed'
+  status: 'InProgress' | 'Completed' | 'Cancelled'
   chiefComplaint: string
   clinicalNotes: string
   diagnosis: string
   instructions: string
   prescriptionLastUpdatedAt: string | null
   prescriptionItems: PrescriptionItem[]
+  version: number
+  clinicianTitles: string
+  clinicianLicenseNumber: string
+  cancellationReason: string
+  amendments: { id: string; authorName: string; reason: string; note: string; createdAt: string }[]
 }
 
 export type PrescriptionItem = {
@@ -109,7 +134,16 @@ export type ScheduleAppointment = {
   startsAt: string
   reason: string
   clinicianName: string
+  clinicianObjectId: string
+  durationMinutes: number
+  status: string
+  consultationId: string | null
+  version: number
 }
+
+export type Clinician = { objectId: string; displayName: string; professionalTitles: string; licenseNumber: string; canEditCredentials: boolean }
+export type WeightRecord = { id: string; value: number; unit: string; measuredOn: string; recordedBy: string }
+export type VaccinationRecord = { id: string; vaccineName: string; administeredOn: string; nextDueOn: string | null; lotNumber: string; veterinarianName: string }
 
 export type Product = {
   id: string
@@ -130,10 +164,12 @@ export type SaleReceipt = {
 type AccessTokenProvider = () => Promise<string | null>
 
 let accessTokenProvider: AccessTokenProvider | undefined
-let selectedClinicId: string | null = null
+let selectedClinicId: string | null = sessionStorage.getItem('selectedClinicId')
 
 export function setSelectedClinicId(clinicId: string | null) {
   selectedClinicId = clinicId
+  if (clinicId) sessionStorage.setItem('selectedClinicId', clinicId)
+  else sessionStorage.removeItem('selectedClinicId')
 }
 
 export function setAccessTokenProvider(provider: AccessTokenProvider | undefined) {
@@ -167,8 +203,9 @@ export async function ensureSuccess(response: Response): Promise<void> {
   const body = await response.text()
   let message = `Request failed with status ${response.status}.`
   if (body && response.headers.get('content-type')?.includes('json')) {
-    const problem: { error?: string; detail?: string; title?: string } = JSON.parse(body)
-    message = problem.error ?? problem.detail ?? problem.title ?? message
+    const problem: { error?: string; detail?: string; title?: string; errors?: Record<string, string[]> } = JSON.parse(body)
+    const validationErrors = problem.errors ? Object.values(problem.errors).flat().join(' ') : ''
+    message = problem.error ?? problem.detail ?? (validationErrors || problem.title || message)
   }
   throw new Error(message)
 }

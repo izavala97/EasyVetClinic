@@ -1,45 +1,67 @@
 import { useEffect, useState } from 'react'
-import { CalendarDays, ClipboardPlus, HeartPulse, PawPrint } from 'lucide-react'
+import { CalendarDays, ClipboardPlus, HeartPulse, Package, Receipt } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { type Dashboard, getJson } from '../api'
+import { type Dashboard, type OperationsToday, getJson } from '../api'
+import { clinicDateTime } from '../schedule'
 
 export function DashboardPage() {
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [summary, setSummary] = useState<{ dashboard: Dashboard; operations: OperationsToday } | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    void getJson<Dashboard>('/api/dashboard').then(setDashboard).catch(() => {
-      setError('The dashboard could not be loaded.')
-    })
+    let active = true
+    void Promise.all([getJson<Dashboard>('/api/dashboard'), getJson<OperationsToday>('/api/operations/today')])
+      .then(([dashboard, operations]) => { if (active) setSummary({ dashboard, operations }) })
+      .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : 'Today could not be loaded.') })
+    return () => { active = false }
   }, [])
 
-  return (
-    <>
-      <header className="topbar">
-        <div><p className="eyebrow">{dashboard?.clinicName ?? 'Clinic workspace'}</p><h1>Dashboard</h1></div>
-        <Link className="primary-action" to="/patients"><ClipboardPlus size={18} /> Start consultation</Link>
-      </header>
-
-      {error && <div className="notice error" role="alert">{error}</div>}
-
+  const operations = summary?.operations
+  return <>
+    <header className="topbar">
+      <div><p className="eyebrow">{summary?.dashboard.clinicName ?? 'Clinic workspace'}</p><h1>Today</h1>
+        {operations && <p>{operations.date} · {operations.timeZoneId}</p>}</div>
+      <Link className="primary-action" to="/patients"><ClipboardPlus size={18} /> Start consultation</Link>
+    </header>
+    {error && <div className="notice error" role="alert">{error}</div>}
+    {!summary && !error && <p role="status">Loading clinic activity...</p>}
+    {summary && <>
       <section className="metrics" aria-label="Today at a glance">
-        <article><CalendarDays size={20} /><span>{dashboard?.todayAppointments ?? '-'}</span><small>Appointments today</small></article>
-        <article><HeartPulse size={20} /><span>{dashboard?.activePatients ?? '-'}</span><small>Active patients</small></article>
-        <article><PawPrint size={20} /><span>{dashboard?.boardingGuests ?? '-'}</span><small>Boarding guests</small></article>
+        <article><CalendarDays size={20} /><span>{summary.dashboard.todayAppointments}</span><small>Appointments today</small></article>
+        <article><HeartPulse size={20} /><span>{summary.operations.activeConsultations}</span><small>Care in progress</small></article>
+        <article><Receipt size={20} /><span>{summary.operations.pendingAccounts}</span><small><Link to="/checkout">Pending accounts</Link></small></article>
+        <article><Package size={20} /><span>{summary.operations.lowStockProducts}</span><small><Link to="/inventory">Low-stock products</Link></small></article>
       </section>
-
+      <section className="content-grid">
+        <section className="panel">
+          <div className="panel-heading"><div><p className="eyebrow">Clinical workspace</p><h2>Care in progress</h2></div><HeartPulse size={22} /></div>
+          {summary.operations.consultations.length === 0 && <p className="empty-state">No consultations are in progress.</p>}
+          <div className="history-list">{summary.operations.consultations.map(visit => <Link key={visit.id} to={`/consultations/${visit.id}`}>
+            <span>{clinicDateTime(visit.startedAt, summary.operations.timeZoneId).date}</span>
+            <strong>{visit.patientName}</strong><small>{visit.guardianName} · {visit.clinicianName}</small>
+          </Link>)}</div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading"><div><p className="eyebrow">Collection</p><h2>Outstanding balances</h2></div><Receipt size={22} /></div>
+          {summary.operations.balancesByCurrency.length === 0 && <p className="empty-state">No pending balances.</p>}
+          <dl className="record-details">{summary.operations.balancesByCurrency.map(balance => <div key={balance.currency}>
+            <dt>{balance.currency}</dt><dd>{new Intl.NumberFormat('en', { style: 'currency', currency: balance.currency }).format(balance.outstandingBalance)}</dd>
+          </div>)}</dl>
+          <Link className="secondary-action" to="/checkout">Review pending accounts</Link>
+        </section>
+      </section>
       <section className="panel appointments">
-        <div className="panel-heading"><div><p className="eyebrow">Schedule</p><h2>Upcoming appointments</h2></div><CalendarDays size={22} /></div>
-        <div className="appointment-list">
-          {dashboard?.upcomingAppointments.map((appointment) => (
-            <Link key={appointment.id} className="appointment" to={`/appointments?appointmentId=${appointment.id}&month=${appointment.startsAt.slice(0, 7)}`}>
-              <time>{appointment.time}</time>
-              <div><strong>{appointment.patientName}</strong><span>{appointment.reason}</span></div>
-              <small>{appointment.clinicianName}</small>
-            </Link>
-          ))}
-        </div>
+        <div className="panel-heading"><div><p className="eyebrow">Schedule</p><h2>Today and tomorrow</h2></div><Link to="/schedule">Open schedule</Link></div>
+        {summary.dashboard.upcomingAppointments.length === 0 && <p className="empty-state">No upcoming appointments.</p>}
+        <div className="appointment-list">{summary.dashboard.upcomingAppointments.map(appointment => {
+          const local = clinicDateTime(appointment.startsAt, summary.operations.timeZoneId)
+          return <Link key={appointment.id} className="appointment" to={`/appointments?appointmentId=${appointment.id}&month=${local.date.slice(0, 7)}`}>
+            <time>{local.date} · {local.time}</time>
+            <div><strong>{appointment.patientName}</strong><span>{appointment.reason}</span></div>
+            <small>{appointment.clinicianName}</small>
+          </Link>
+        })}</div>
       </section>
-    </>
-  )
+    </>}
+  </>
 }

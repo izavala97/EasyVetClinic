@@ -48,14 +48,16 @@ public sealed record UpdateGuardianRequest(
     string IdentityDocumentUrl);
 
 public sealed record CreatePatientRequest(
-    IReadOnlyList<string> GuardianIds,
+    IReadOnlyList<string>? GuardianIds,
     string Name,
     string Species,
-    string Breed,
-    string Sex,
-    string Weight,
-    string Color,
-    string Allergies);
+    string? Breed = null,
+    string? Sex = null,
+    string? Weight = null,
+    string? Color = null,
+    string? Allergies = null,
+    string? PrimaryGuardianId = null,
+    CreateGuardianRequest? NewGuardian = null);
 
 public sealed record UpdatePatientRequest(
     string Name,
@@ -98,26 +100,39 @@ public sealed record ScheduleAppointment(
     string PatientName,
     DateTimeOffset StartsAt,
     string Reason,
-    string ClinicianName);
+    string ClinicianName,
+    int DurationMinutes,
+    string Status,
+    string? ConsultationId,
+    int Version,
+    string ClinicianObjectId);
 
 public sealed record CreateAppointmentRequest(
     string PatientId,
     DateTimeOffset StartsAt,
     string Reason,
-    string ClinicianName);
+    string ClinicianName,
+    int DurationMinutes = 30,
+    string? ClinicianObjectId = null,
+    string? LocalStartsAt = null);
 
 public sealed record UpdateAppointmentRequest(
     string PatientId,
     DateTimeOffset StartsAt,
     string Reason,
-    string ClinicianName);
+    string ClinicianName,
+    int DurationMinutes = 30,
+    string Status = "Scheduled",
+    int? ExpectedVersion = null,
+    string? ClinicianObjectId = null,
+    string? LocalStartsAt = null);
 
 public sealed record ProductSummary(
     string Id,
     string Name,
     string Category,
     decimal UnitPrice,
-    int StockOnHand);
+    decimal StockOnHand);
 
 public sealed record CheckoutLineRequest(string ProductId, int Quantity);
 public sealed record ServiceSaleLineRequest(string Name, decimal UnitPrice);
@@ -148,17 +163,13 @@ public sealed record ClinicProfile(
     string Name,
     string Address,
     string LogoUrl,
-    string VeterinarianName,
-    string VeterinarianTitles,
-    string VeterinarianLicenseNumber);
+    string TimeZoneId);
 
 public sealed record UpdateClinicProfileRequest(
     string Name,
     string Address,
     string LogoUrl,
-    string VeterinarianName,
-    string VeterinarianTitles,
-    string VeterinarianLicenseNumber);
+    string TimeZoneId = "UTC");
 
 public sealed record ConsultationSummary(
     string Id,
@@ -168,7 +179,7 @@ public sealed record ConsultationSummary(
     DateTimeOffset StartedAt,
     string Status);
 
-public sealed record StartConsultationRequest(string ClinicianName);
+public sealed record StartConsultationRequest(string? ClinicianName, string? AppointmentId = null, string? ClinicianObjectId = null);
 
 public sealed record ConsultationDetail(
     string Id,
@@ -183,7 +194,18 @@ public sealed record ConsultationDetail(
     string Diagnosis,
     string Instructions,
     DateTimeOffset? PrescriptionLastUpdatedAt,
-    IReadOnlyList<PrescriptionItemSummary> PrescriptionItems);
+    IReadOnlyList<PrescriptionItemSummary> PrescriptionItems,
+    int Version,
+    string ClinicianTitles,
+    string ClinicianLicenseNumber,
+    string CancellationReason,
+    IReadOnlyList<ClinicalAmendmentSummary> Amendments);
+
+public sealed record ClinicalAmendmentSummary(string Id, string AuthorName, string Reason, string Note, DateTimeOffset CreatedAt);
+public sealed record CreateClinicalAmendmentRequest(string Reason, string Note, int ExpectedVersion);
+public sealed record CancelConsultationRequest(string Reason, int ExpectedVersion);
+public sealed record ClinicianSummary(string ObjectId, string DisplayName, string ProfessionalTitles, string LicenseNumber, bool CanEditCredentials = true);
+public sealed record UpdateClinicianCredentialsRequest(string ProfessionalTitles, string LicenseNumber);
 
 public sealed record PrescriptionItemSummary(string Id, string MedicationName, string Presentation, string Concentration, string DosageDirections, int SortOrder);
 
@@ -193,9 +215,10 @@ public sealed record UpdateConsultationRequest(
     string Diagnosis,
     string Instructions,
     string Status,
-    IReadOnlyList<PrescriptionItemRequest> PrescriptionItems);
+    IReadOnlyList<PrescriptionItemRequest> PrescriptionItems,
+    int? ExpectedVersion = null);
 
-public sealed record PrescriptionItemRequest(string MedicationName, string Presentation, string Concentration, string DosageDirections, int SortOrder);
+public sealed record PrescriptionItemRequest(string MedicationName, string Presentation, string Concentration, string DosageDirections, int SortOrder, string? Id = null);
 
 public sealed record DocumentDraft(
     string Type,
@@ -221,7 +244,4 @@ public sealed record CreatedInvitation(InvitationSummary Invitation, string Toke
 public sealed record CreateInitialClinicRequest(
     string Name,
     string Address,
-    string LogoUrl,
-    string VeterinarianName,
-    string VeterinarianTitles,
-    string VeterinarianLicenseNumber);
+    string LogoUrl);

@@ -1,126 +1,116 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { CalendarDays, Pencil, Save, Search } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
-import { apiFetch, type Patient, type ScheduleAppointment, getJson } from '../api'
-
-const appointmentReasons = [
-  'General consultation',
-  'Grooming',
-  'Bath',
-  'Vaccination',
-  'Deworming',
-  'Surgery',
-  'Follow-up',
-]
-
-function currentMonth() {
-  return new Date().toISOString().slice(0, 7)
-}
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuthentication } from '../auth'
+import { apiFetch, ensureSuccess, getJson, type ScheduleAppointment, type Clinician, type ClinicProfile } from '../api'
+import { appointmentReasons, clinicDateTime } from '../schedule'
 
 export function AppointmentsPage() {
-  const [searchParams] = useSearchParams()
-  const appointmentId = searchParams.get('appointmentId')
-  const [month, setMonth] = useState(() => searchParams.get('month') ?? currentMonth())
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const { currentUser } = useAuthentication()
+  const [month, setMonth] = useState(params.get('month') ?? '')
+  const [zone, setZone] = useState<string | null>(null)
   const [appointments, setAppointments] = useState<ScheduleAppointment[]>([])
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedAppointment, setSelectedAppointment] = useState<ScheduleAppointment | null>(null)
-  const [patientId, setPatientId] = useState('')
-  const [patientQuery, setPatientQuery] = useState('')
-  const [isPatientListOpen, setIsPatientListOpen] = useState(false)
+  const [clinicians, setClinicians] = useState<Clinician[]>([])
+  const [selected, setSelected] = useState<ScheduleAppointment | null>(null)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [reason, setReason] = useState('')
-  const [clinicianName, setClinicianName] = useState('')
-  const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
-
-  function loadAppointments(selectedMonth: string) {
-    const [year, monthNumber] = selectedMonth.split('-')
-    void getJson<ScheduleAppointment[]>(`/api/appointments?year=${year}&month=${monthNumber}`)
-      .then((data) => {
-        setAppointments(data)
-        setError('')
-        const appointment = data.find((candidate) => candidate.id === appointmentId)
-        if (appointment) selectAppointment(appointment)
-      })
-      .catch(() => setError('Appointments could not be loaded.'))
-  }
+  const [notice, setNotice] = useState('')
+  const [pending, setPending] = useState(false)
+  const requestedId = params.get('appointmentId')
+  const canStart = ['ClinicAdmin', 'Veterinarian', 'SuperAdmin'].includes(currentUser?.role ?? '')
 
   useEffect(() => {
-    loadAppointments(month)
-  }, [month])
+    void Promise.all([getJson<ClinicProfile>('/api/clinic'), getJson<Clinician[]>('/api/clinicians')]).then(([profile, team]) => {
+      setZone(profile.timeZoneId); setClinicians(team)
+      if (!params.get('month')) setMonth(clinicDateTime(new Date(), profile.timeZoneId).date.slice(0, 7))
+    }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'Schedule configuration could not be loaded.'))
+  }, [params])
 
   useEffect(() => {
-    void getJson<Patient[]>('/api/patients')
-      .then(setPatients)
-      .catch(() => setError('Patients could not be loaded.'))
-  }, [])
+    if (!month || !zone) return
+    let active = true
+    const [year, number] = month.split('-')
+    void getJson<ScheduleAppointment[]>(`/api/appointments?year=${year}&month=${number}`).then(data => {
+      if (!active) return
+      setAppointments(data)
+      const requested = data.find(item => item.id === requestedId)
+      if (requested) { setSelected(requested); const local = clinicDateTime(requested.startsAt, zone); setDate(local.date); setTime(local.time) }
+    }).catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : 'Appointments could not be loaded.') })
+    return () => { active = false }
+  }, [month, zone, requestedId])
 
-  const selectedPatient = patients.find((patient) => patient.id === patientId)
-  const matchingPatients = patients.filter((patient) => {
-    const query = patientQuery.trim().toLowerCase()
-    return !query || [patient.name, patient.guardianName, patient.guardianPhone].some((value) => value.toLowerCase().includes(query))
-  })
-
-  function selectAppointment(appointment: ScheduleAppointment) {
-    setSelectedAppointment(appointment)
-    setPatientId(appointment.patientId)
-    setPatientQuery('')
-    setDate(appointment.startsAt.slice(0, 10))
-    setTime(appointment.startsAt.slice(11, 16))
-    setReason(appointment.reason)
-    setClinicianName(appointment.clinicianName)
-    setNotice('')
-    setError('')
+  function select(item: ScheduleAppointment) {
+    if (!zone) return
+    setSelected(item); setError(''); setNotice('')
+    const local = clinicDateTime(item.startsAt, zone)
+    setDate(local.date); setTime(local.time)
   }
 
-  async function saveAppointment(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent) {
     event.preventDefault()
-    if (!selectedAppointment) return
-    setNotice('')
-    setError('')
-
+    if (!selected || pending) return
+    setPending(true); setError('')
     try {
-      const response = await apiFetch(`/api/appointments/${selectedAppointment.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId, startsAt: `${date}T${time}:00`, reason, clinicianName }),
+      const response = await apiFetch(`/api/appointments/${selected.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...selected, expectedVersion: selected.version, startsAt: new Date(`${date}T${time}`).toISOString(),
+          localStartsAt: `${date}T${time}` }),
       })
-      if (response.status === 409) {
-        setError('That time is already booked. Select another time.')
-        return
-      }
-      if (!response.ok) throw new Error()
-      const updatedAppointment = await response.json() as ScheduleAppointment
-      setSelectedAppointment(updatedAppointment)
+      await ensureSuccess(response)
+      const updated = await response.json() as ScheduleAppointment
+      setSelected(updated); setAppointments(items => items.map(item => item.id === updated.id ? updated : item))
       setNotice('Appointment updated.')
-      loadAppointments(month)
-    } catch {
-      setError('Appointment could not be updated. Complete all fields and try again.')
-    }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Appointment could not be saved.') }
+    finally { setPending(false) }
   }
 
-  const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString([], { month: 'long', year: 'numeric' })
+  async function start() {
+    if (!selected || pending) return
+    if (selected.consultationId) { navigate(`/consultations/${selected.consultationId}`); return }
+    setPending(true); setError('')
+    try {
+      const response = await apiFetch(`/api/patients/${selected.patientId}/consultations`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: selected.id, clinicianObjectId: selected.clinicianObjectId || currentUser?.objectId }),
+      })
+      await ensureSuccess(response)
+      const record = await response.json() as { id: string }
+      navigate(`/consultations/${record.id}`)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Consultation could not be started.') }
+    finally { setPending(false) }
+  }
 
-  return (
-    <>
-      <header className="page-header"><div><p className="eyebrow">Care planning</p><h1>Appointments</h1></div><CalendarDays size={26} /></header>
-      {notice && <div className="notice" role="status">{notice}</div>}
-      {error && <div className="notice error" role="alert">{error}</div>}
-      <section className="schedule-layout appointment-management-layout">
-        <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Scheduled visits</p><h2>{monthLabel}</h2></div><label className="month-field"><span>Month</span><input aria-label="Appointment month" type="month" value={month} onChange={(event) => { setMonth(event.target.value); setSelectedAppointment(null); setNotice('') }} /></label></div>
-          <div className="appointment-management-list">
-            {appointments.map((appointment) => <button className={`appointment-management-row ${selectedAppointment?.id === appointment.id ? 'selected' : ''}`} type="button" key={appointment.id} onClick={() => selectAppointment(appointment)}><time>{new Date(appointment.startsAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}<span>{appointment.startsAt.slice(11, 16)}</span></time><div><strong>{appointment.patientName}</strong><span>{appointment.reason}</span></div><small>{appointment.clinicianName}</small></button>)}
-            {!appointments.length && <p className="empty-state">No appointments scheduled for this month.</p>}
-          </div>
-        </section>
-        <form className="panel appointment-form" onSubmit={(event) => void saveAppointment(event)}>
-          <div className="panel-heading"><div><p className="eyebrow">Appointment details</p><h2>{selectedAppointment ? 'Edit appointment' : 'Select an appointment'}</h2></div><Pencil size={22} /></div>
-          {selectedAppointment ? <><label>Patient<div className="patient-combobox"><div className="search-field"><Search size={16} /><input value={patientQuery} onChange={(event) => { setPatientQuery(event.target.value); setIsPatientListOpen(true) }} onFocus={() => setIsPatientListOpen(true)} placeholder={selectedPatient ? `${selectedPatient.name} - ${selectedPatient.guardianName}` : 'Search pet, guardian, or phone'} role="combobox" aria-expanded={isPatientListOpen} aria-controls="appointments-patient-options" aria-autocomplete="list" /></div>{isPatientListOpen && <div className="patient-options" id="appointments-patient-options" role="listbox">{matchingPatients.map((patient) => <button type="button" role="option" aria-selected={patient.id === patientId} key={patient.id} onClick={() => { setPatientId(patient.id); setPatientQuery(''); setIsPatientListOpen(false) }}><strong>{patient.name}</strong><span>{patient.guardianName} · {patient.guardianPhone}</span></button>)}{!matchingPatients.length && <p className="empty-state">No patients match this search.</p>}</div>}</div></label><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label><label>Time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></label><label>Reason<select value={reason} onChange={(event) => setReason(event.target.value)}>{appointmentReasons.map((appointmentReason) => <option key={appointmentReason} value={appointmentReason}>{appointmentReason}</option>)}</select></label><label>Clinician<input value={clinicianName} onChange={(event) => setClinicianName(event.target.value)} required /></label><button className="primary-action" type="submit"><Save size={18} /> Save changes</button></> : <p className="empty-state">Choose an appointment from the list to view and edit it.</p>}
-        </form>
+  return <>
+    <header className="page-header"><h1>Appointments</h1><Link to="/schedule">Schedule a visit</Link></header>
+    <p>Clinic time zone: {zone ?? 'Loading...'}</p>
+    {error && <div className="notice error" role="alert">{error}</div>}
+    {notice && <div className="notice" role="status">{notice}</div>}
+    <section className="schedule-layout">
+      <section className="panel"><label>Month<input type="month" value={month} onChange={event => { setMonth(event.target.value); setSelected(null) }} /></label>
+        {appointments.map(item => <button className="appointment-management-row" type="button" key={item.id} onClick={() => select(item)}>
+          <strong>{item.patientName}</strong><span>{zone && `${clinicDateTime(item.startsAt, zone).date} ${clinicDateTime(item.startsAt, zone).time}`}</span>
+          <span>{item.clinicianName} · {item.status}</span></button>)}
+        {!appointments.length && <p>No appointments this month.</p>}
       </section>
-    </>
-  )
+      {selected ? <section className="panel"><h2>{selected.patientName}</h2>
+        {selected.consultationId ? <Link to={`/consultations/${selected.consultationId}`}>Open linked consultation</Link> :
+          <form onSubmit={event => void save(event)}><fieldset disabled={pending}>
+            <label>Date<input type="date" value={date} required onChange={event => setDate(event.target.value)} /></label>
+            <label>Clinic-local time<input type="time" value={time} required onChange={event => setTime(event.target.value)} /></label>
+            <label>Duration<input type="number" min={5} max={480} value={selected.durationMinutes} onChange={event => setSelected({ ...selected, durationMinutes: Number(event.target.value) })} /></label>
+            <label>Clinician<select value={selected.clinicianObjectId} required onChange={event => setSelected({ ...selected, clinicianObjectId: event.target.value })}>
+              <option value="">Select clinician</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}</select></label>
+            <label>Reason<select value={selected.reason} onChange={event => setSelected({ ...selected, reason: event.target.value })}>
+              {appointmentReasons.map(value => <option key={value}>{value}</option>)}</select></label>
+            <label>Status<select value={selected.status} onChange={event => setSelected({ ...selected, status: event.target.value })}>
+              {['Scheduled', 'CheckedIn', 'Cancelled', 'NoShow'].map(value => <option key={value}>{value}</option>)}</select></label>
+            <button className="primary-action" type="submit">Save appointment</button>
+          </fieldset></form>}
+        {canStart && ['Scheduled', 'CheckedIn', 'InProgress'].includes(selected.status) &&
+          <button className="secondary-action" type="button" disabled={pending} onClick={() => void start()}>{selected.consultationId ? 'Resume consultation' : 'Start consultation'}</button>}
+      </section> : <p>Select an appointment.</p>}
+    </section>
+  </>
 }

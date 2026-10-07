@@ -22,6 +22,64 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.AccountPayment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BillingAccountId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("CashReceived")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ChangeGiven")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BillingAccountId");
+
+                    b.HasIndex("ClinicId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("AccountPayments");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Appointment", b =>
                 {
                     b.Property<string>("Id")
@@ -35,6 +93,16 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ClinicianObjectId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ConsultationId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
                     b.Property<string>("PatientId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -46,13 +114,205 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Property<DateTimeOffset>("StartsAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PatientId");
 
+                    b.HasIndex("ClinicId", "ConsultationId");
+
                     b.HasIndex("ClinicId", "StartsAt");
 
                     b.ToTable("Appointments");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.BillingAccount", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ConsultationId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTimeOffset?>("OpenedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PatientId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsultationId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ClinicId", "ConsultationId")
+                        .IsUnique()
+                        .HasFilter("[ConsultationId] IS NOT NULL");
+
+                    b.HasIndex("ClinicId", "CreatedAt");
+
+                    b.ToTable("BillingAccounts");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.CatalogService", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("CatalogServices");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ChargeLine", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BillingAccountId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CatalogItemId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CatalogVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("FulfilledQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("NameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PriceOverrideReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("SkuSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UnitSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BillingAccountId");
+
+                    b.ToTable("ChargeLines");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Clinic", b =>
@@ -77,25 +337,18 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int>("SchedulingVersion")
+                        .HasColumnType("int");
+
                     b.Property<string>("SuspensionReason")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("VeterinarianLicenseNumber")
+                    b.Property<string>("TimeZoneId")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("VeterinarianName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("VeterinarianTitles")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
 
                     b.HasKey("Id");
 
@@ -167,6 +420,14 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LicenseNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProfessionalTitles")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -180,10 +441,53 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.ToTable("ClinicUsers");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicalAmendment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AuthorObjectId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ConsultationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsultationId");
+
+                    b.ToTable("ClinicalAmendments");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CancellationReason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ChiefComplaint")
                         .IsRequired()
@@ -197,7 +501,19 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ClinicianLicenseNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ClinicianName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClinicianObjectId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClinicianTitles")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -219,6 +535,10 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -277,6 +597,79 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.HasIndex("ClinicId", "Phone");
 
                     b.ToTable("Guardians");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.InventoryMovement", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("BillingAccountId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ChargeLineId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClinicId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("QuantityChange")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SkuSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
+                    b.HasIndex("ClinicId", "OperationKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "CreatedAt");
+
+                    b.ToTable("InventoryMovements");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Patient", b =>
@@ -452,21 +845,53 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LowStockThreshold")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("StockOnHand")
-                        .HasColumnType("int");
+                    b.Property<string>("Sku")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("StockOnHand")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<bool>("TrackStock")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClinicId", "Name")
                         .IsUnique();
+
+                    b.HasIndex("ClinicId", "Sku")
+                        .IsUnique()
+                        .HasFilter("[Sku] IS NOT NULL AND [Sku] <> ''");
 
                     b.ToTable("Products");
                 });
@@ -615,6 +1040,17 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.ToTable("WeightRecords");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.AccountPayment", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.BillingAccount", "BillingAccount")
+                        .WithMany("Payments")
+                        .HasForeignKey("BillingAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BillingAccount");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Appointment", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Clinic", "Clinic")
@@ -632,6 +1068,45 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Navigation("Clinic");
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.BillingAccount", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Clinic", null)
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EasyVetClinic.Api.Data.Consultation", null)
+                        .WithMany()
+                        .HasForeignKey("ConsultationId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EasyVetClinic.Api.Data.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.CatalogService", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Clinic", null)
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ChargeLine", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.BillingAccount", "BillingAccount")
+                        .WithMany("Lines")
+                        .HasForeignKey("BillingAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BillingAccount");
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicInvitation", b =>
@@ -656,6 +1131,17 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Navigation("Clinic");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.ClinicalAmendment", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Consultation", "Consultation")
+                        .WithMany("Amendments")
+                        .HasForeignKey("ConsultationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Consultation");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
                 {
                     b.HasOne("EasyVetClinic.Api.Data.Patient", "Patient")
@@ -676,6 +1162,15 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                         .IsRequired();
 
                     b.Navigation("Clinic");
+                });
+
+            modelBuilder.Entity("EasyVetClinic.Api.Data.InventoryMovement", b =>
+                {
+                    b.HasOne("EasyVetClinic.Api.Data.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Patient", b =>
@@ -800,6 +1295,13 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
                     b.Navigation("Patient");
                 });
 
+            modelBuilder.Entity("EasyVetClinic.Api.Data.BillingAccount", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("EasyVetClinic.Api.Data.Clinic", b =>
                 {
                     b.Navigation("Appointments");
@@ -817,6 +1319,8 @@ namespace EasyVetClinic.Api.Data.SqlServerMigrations
 
             modelBuilder.Entity("EasyVetClinic.Api.Data.Consultation", b =>
                 {
+                    b.Navigation("Amendments");
+
                     b.Navigation("Prescription");
                 });
 

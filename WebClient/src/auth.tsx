@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { BrowserCacheLocation, InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser'
 import { MsalProvider, useMsal } from '@azure/msal-react'
 import { type CurrentUser, getJson, setAccessTokenProvider, setSelectedClinicId } from './api'
+import { canLeaveWorkspace } from './navigationGuard'
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID
@@ -99,6 +100,7 @@ function DevelopmentAuthenticatedApplication({ children }: { children: ReactNode
     signOut: async () => undefined,
     refreshCurrentUser,
     selectClinic: async (clinicId) => {
+      if (!canLeaveWorkspace()) return
       setSelectedClinicId(clinicId)
       await refreshCurrentUser()
     },
@@ -166,11 +168,13 @@ function AuthenticatedApplication({ children }: { children: ReactNode }) {
       }
     },
     signOut: async () => {
+      if (!canLeaveWorkspace()) return
       setSelectedClinicId(null)
       await instance.logoutRedirect({ account: account ?? undefined })
     },
     refreshCurrentUser,
     selectClinic: async (clinicId) => {
+      if (!canLeaveWorkspace()) return
       setSelectedClinicId(clinicId)
       await refreshCurrentUser()
     },

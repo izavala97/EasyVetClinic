@@ -1,0 +1,136 @@
+.commerce-subtitle { margin: 8px 0 0; color: #718078; font-size: 14px; }
+.commerce-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.commerce-tabs button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #dcd4c9; background: #fffdf9; color: #36544d; padding: 10px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.commerce-tabs button[aria-selected="true"] { border-color: #719c8f; background: #e7f0e5; color: #285e56; }
+.catalog-layout, .inventory-layout, .checkout-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .8fr); align-items: start; gap: 18px; }
+.catalog-layout > .panel, .inventory-layout > .panel, .checkout-layout > .panel, .checkout-account-list > .panel { min-width: 0; }
+.checkout-account-list { display: grid; gap: 18px; }
+.commerce-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.commerce-toolbar .search-field { flex: 1; min-width: 150px; }
+.commerce-toolbar .primary-action { flex: 0 0 auto; }
+.inline-check { display: flex; align-items: center; gap: 7px; margin: 8px 0 14px; color: #586a64; font-size: 13px; }
+.commerce-list { border-top: 1px solid #eee5da; }
+.commerce-list-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid #eee5da; }
+.commerce-list-row.is-archived { opacity: .62; }
+.commerce-item-info { min-width: 0; display: grid; gap: 3px; }
+.commerce-item-info strong { color: #36544d; font-size: 13px; }
+.commerce-item-info span, .commerce-item-info small, .commerce-item-price small { color: #778079; font-size: 12px; }
+.commerce-item-info small { overflow-wrap: anywhere; }
+.commerce-item-price { display: grid; gap: 3px; text-align: right; white-space: nowrap; }
+.commerce-item-price strong { color: #2d4540; font-size: 13px; }
+.commerce-row-actions { display: flex; gap: 4px; }
+.favorite-button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 6px; background: #fbf8f3; color: #d16f68; cursor: pointer; }
+.favorite-button:disabled { opacity: .4; cursor: not-allowed; }
+.favorite-quick-add { margin: 14px 0; }
+.favorite-quick-add h3 { margin: 0; font-size: 14px; color: #36544d; }
+.favorite-quick-add p { margin: 6px 0 10px; font-size: 12px; color: #718078; }
+.favorite-quick-add > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.commerce-form .inline-check { display: flex; }
+.commerce-form input[type="checkbox"] { width: auto; }
+.commerce-form { display: grid; gap: 14px; }
+.commerce-fields { display: grid; gap: 14px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.commerce-fields > label { display: grid; gap: 6px; color: #586a64; font-size: 12px; font-weight: 700; }
+.price-override-form { margin: 16px 0; padding: 14px; border: 1px solid #dcd4c9; border-radius: 6px; background: #fbf8f3; }
+.price-override-form h3 { margin: 0; font-size: 14px; color: #36544d; }
+.commerce-form h2 { margin-bottom: 3px; }
+.commerce-form > label, .commerce-field { display: grid; gap: 6px; color: #586a64; font-size: 12px; font-weight: 700; }
+.commerce-form input, .commerce-form select, .commerce-form textarea, .commerce-field input, .commerce-field select, .commerce-field textarea { width: 100%; padding: 10px; border: 1px solid #dcd4c9; border-radius: 5px; background: #fffdf9; color: #36544d; font: inherit; }
+.commerce-form textarea { resize: vertical; line-height: 1.45; }
+.commerce-access-note { background: #f5f8f2; }
+.commerce-access-note p { margin: 10px 0 0; color: #718078; font-size: 13px; line-height: 1.5; }
+.commerce-metrics { margin-bottom: 18px; }
+.commerce-metrics article { min-height: 90px; }
+.commerce-metrics article span { font-size: 28px; }
+.commerce-metrics article strong { color: #718078; font-size: 12px; }
+.commerce-metrics article.metric-warning { border-color: #e9c5bd; background: #fff1ed; }
+.low-stock-panel { margin-bottom: 18px; }
+.inventory-layout { grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); }
+.stock-count { display: grid; justify-items: end; gap: 2px; color: #2d4540; }
+.stock-count strong { font-size: 17px; }
+.stock-count small { color: #778079; font-size: 11px; }
+.inventory-history { margin-top: 18px; }
+.commerce-table-wrap { overflow-x: auto; }
+.commerce-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.commerce-table th { color: #718078; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.commerce-table th, .commerce-table td { padding: 10px 8px; border-bottom: 1px solid #eee5da; white-space: nowrap; }
+.commerce-table td:nth-child(6) { white-space: normal; min-width: 150px; }
+.commerce-table td:nth-child(7) { white-space: normal; }
+.commerce-field { margin-bottom: 14px; }
+.checkout-layout { grid-template-columns: minmax(260px, .75fr) minmax(0, 1.3fr); align-items: stretch; }
+.checkout-detail { min-height: 400px; }
+.checkout-detail, .consultation-charges { container-type: inline-size; }
+.checkout-empty { display: grid; justify-items: center; align-content: center; min-height: 340px; text-align: center; color: #819088; }
+.checkout-empty h2 { margin: 14px 0 6px; }
+.checkout-empty p { max-width: 400px; margin: 0; font-size: 13px; line-height: 1.5; }
+.account-list { display: grid; }
+.account-list-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 12px 8px; border: 0; border-bottom: 1px solid #eee5da; background: transparent; color: #36544d; text-align: left; cursor: pointer; }
+.account-list-item:hover, .account-list-item.selected { background: #f5f8f2; }
+.account-list-item > span { display: grid; gap: 4px; min-width: 0; }
+.account-list-item strong { font-size: 13px; }
+.account-list-item small { color: #778079; font-size: 11px; }
+.account-list-balance { justify-items: end; white-space: nowrap; }
+.history-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; background: transparent; color: #36544d; text-align: left; cursor: pointer; }
+.history-toggle .eyebrow { margin-bottom: 4px; }
+.history-toggle strong { font-size: 14px; }
+.history-toggle .rotated { transform: rotate(90deg); }
+.account-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.account-heading h2 { margin: 0; }
+.account-heading p:not(.eyebrow) { margin: 7px 0 0; color: #778079; font-size: 12px; }
+.account-status { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; background: #f5f1ea; color: #586a64; font-size: 10px; font-weight: 700; }
+.status-paid, .status-fulfilled { background: #e9f6ee; color: #285e56; }
+.status-cancelled { background: #fff1ed; color: #a9534e; }
+.add-charge-form { display: grid; grid-template-columns: minmax(120px, .9fr) minmax(170px, 1.4fr) 86px auto; align-items: end; gap: 9px; padding-bottom: 16px; border-bottom: 1px solid #eee5da; }
+.add-charge-form .commerce-field { margin: 0; }
+.add-charge-form .primary-action { padding: 10px 11px; font-size: 12px; }
+.quantity-field input { min-width: 0; }
+.account-lines { border-bottom: 1px solid #eee5da; }
+.account-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid #f1ebe3; font-size: 12px; }
+.account-line > strong { white-space: nowrap; }
+.quantity-stepper { display: flex; align-items: center; gap: 8px; }
+.quantity-stepper button { width: 28px; height: 28px; border: 1px solid #dcd4c9; border-radius: 5px; background: #fffdf9; color: #36544d; font-size: 18px; cursor: pointer; }
+.account-totals { display: grid; gap: 8px; margin: 14px 0 18px; }
+.account-totals > div { display: flex; justify-content: space-between; gap: 12px; color: #718078; font-size: 13px; }
+.account-totals strong { color: #36544d; }
+.account-totals .balance-total { padding-top: 9px; border-top: 1px solid #e8ded1; color: #2d4540; font-weight: 700; }
+.account-totals .balance-total strong { font-size: 18px; }
+.payment-form { padding: 16px 0; border-top: 1px solid #eee5da; }
+.payment-form h3, .payment-history h3 { margin: 0 0 12px; color: #2d4540; font-size: 17px; }
+.payment-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.cash-change { margin: 10px 0 0; color: #718078; font-size: 12px; }
+.cash-change strong { color: #285e56; }
+.payment-history { padding: 16px 0; border-top: 1px solid #eee5da; }
+.payment-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1ebe3; font-size: 12px; }
+.payment-row > span { display: grid; gap: 4px; }
+.payment-row small { color: #778079; font-size: 11px; }
+.payment-amount { text-align: right; }
+.fulfillment-panel { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px; border: 1px solid #d2dfcf; border-radius: 6px; background: #f5f8f2; }
+.fulfillment-panel > div { display: grid; gap: 4px; min-width: 0; }
+.fulfillment-panel strong { color: #36544d; font-size: 12px; }
+.fulfillment-panel small { color: #718078; font-size: 11px; line-height: 1.4; }
+.fulfillment-panel .secondary-action { flex: 0 0 auto; }
+.commerce-receipt-ready { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.refresh-commerce { margin: 8px 0 0 8px; }
+.account-consultation-link { display: inline-block; margin-top: 14px; color: #47736a; font-size: 12px; font-weight: 700; text-decoration: none; }
+.consultation-charges { margin-top: 20px; }
+.consultation-charges .account-heading { margin-top: 8px; }
+@media (max-width: 1200px) {
+  .catalog-layout, .inventory-layout, .checkout-layout { grid-template-columns: 1fr; }
+}
+@container (max-width: 620px) {
+  .add-charge-form { grid-template-columns: minmax(0, 1fr) 86px; }
+  .add-charge-form .commerce-field:first-child, .add-charge-form .commerce-field:nth-child(2) { grid-column: 1 / -1; }
+  .add-charge-form .primary-action { grid-column: 1 / -1; justify-content: center; }
+  .fulfillment-panel, .commerce-receipt-ready { align-items: stretch; flex-direction: column; }
+}
+@media (max-width: 600px) {
+  .commerce-toolbar { align-items: stretch; flex-direction: column; }
+  .commerce-list-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .commerce-row-actions { grid-column: 2 / -1; justify-content: end; }
+  .add-charge-form { grid-template-columns: minmax(0, 1fr) 75px; }
+  .add-charge-form .commerce-field:first-child, .add-charge-form .commerce-field:nth-child(2) { grid-column: 1 / -1; }
+  .add-charge-form .primary-action { grid-column: 1 / -1; justify-content: center; }
+  .account-line { gap: 7px; }
+  .payment-fields { grid-template-columns: 1fr; }
+  .fulfillment-panel, .commerce-receipt-ready { align-items: stretch; flex-direction: column; }
+  .account-status { font-size: 9px; }
+}

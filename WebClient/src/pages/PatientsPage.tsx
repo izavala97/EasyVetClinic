@@ -9,22 +9,25 @@ export function PatientsPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let active = true
     const timer = window.setTimeout(() => {
       void getJson<Patient[]>(`/api/patients?query=${encodeURIComponent(query)}`)
         .then((patientData) => {
+          if (!active) return
           setPatients(patientData)
           setError('')
         })
-        .catch(() => setError('Patients could not be loaded.'))
+        .catch(() => { if (active) setError('Patients could not be loaded.') })
     }, 180)
 
-    return () => window.clearTimeout(timer)
+    return () => { active = false; window.clearTimeout(timer) }
   }, [query])
 
   return (
     <>
       <header className="page-header"><div><p className="eyebrow">Clinical records</p><h1>Patients</h1></div><div className="header-actions"><Link className="secondary-action" to="/guardians/new"><UserRoundPlus size={17} /> Register guardian</Link><Link className="primary-action" to="/patients/new"><Stethoscope size={18} /> Register patient</Link></div></header>
       {error && <div className="notice error" role="alert">{error}</div>}
+      <Link className="secondary-action" to="/guardians">Guardian directory</Link>
       <section className="panel patient-directory">
         <label className="search-field"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Phone, guardian, or patient" /></label>
         <div className="patient-list directory-list">

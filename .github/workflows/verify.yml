@@ -1,0 +1,46 @@
+name: Verify clinic workflows
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+      - run: dotnet restore WebAPI\WebAPI.csproj
+      - name: Administration regression
+        shell: pwsh
+        run: .\scripts\test-administration.ps1
+      - name: Clinical workflow
+        shell: pwsh
+        run: .\scripts\test-clinical-workflow.ps1
+      - name: Commercial workflow
+        shell: pwsh
+        run: .\scripts\test-commerce.ps1
+  client:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: WebClient/package-lock.json
+      - run: npm ci
+        working-directory: WebClient
+      - run: npm run build
+        working-directory: WebClient
+      - run: npm run lint
+        working-directory: WebClient
+      - run: npm test
+        working-directory: WebClient

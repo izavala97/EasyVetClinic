@@ -1,10 +1,10 @@
 [CmdletBinding()]
-param()
+param([string]$Configuration = 'Debug')
 
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $apiDirectory = Join-Path $repositoryRoot 'WebAPI'
-$assembly = Join-Path $apiDirectory 'bin\Debug\net10.0\WebAPI.dll'
+$assembly = Join-Path $apiDirectory "bin\$Configuration\net10.0\WebAPI.dll"
 $testDirectory = Join-Path ([IO.Path]::GetTempPath()) ("EasyVetClinic-admin-" + [Guid]::NewGuid())
 $database = Join-Path $testDirectory 'administration.db'
 $processes = [Collections.Generic.List[Diagnostics.Process]]::new()
@@ -86,7 +86,7 @@ function Assert-Value {
 }
 
 try {
-    & dotnet build (Join-Path $apiDirectory 'WebAPI.csproj') --no-restore
+    & dotnet build (Join-Path $apiDirectory 'WebAPI.csproj') --no-restore --configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'API build failed.' }
     New-Item -ItemType Directory -Path $testDirectory | Out-Null
     $owner = Start-TestApi 'owner' 'maizorin@hotmail.es'
@@ -107,8 +107,7 @@ try {
     $null = Assert-Request $noOwner 'platform/clinics' 403
 
     $profile = @{
-        name = 'First clinic'; address = ''; logoUrl = ''; veterinarianName = 'Doctor'
-        veterinarianTitles = ''; veterinarianLicenseNumber = ''
+        name = 'First clinic'; address = ''; logoUrl = ''
     }
     $null = Assert-Request $outsider 'onboarding/clinic' 403 'POST' $profile
     $first = Assert-Request $owner 'onboarding/clinic' 201 'POST' $profile

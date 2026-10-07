@@ -41,11 +41,9 @@ public sealed class OnboardingController(ClinicDbContext dbContext, PlatformAcce
     [RequirePlatformOwner]
     public async Task<ActionResult<PlatformClinicSummary>> CreateClinic(CreateInitialClinicRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.VeterinarianName)
-            || request.Name.Length > 200 || request.VeterinarianName.Length > 200
-            || request.Address.Length > 500 || request.VeterinarianTitles.Length > 300 || request.VeterinarianLicenseNumber.Length > 100)
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200 || request.Address.Length > 500)
         {
-            return ValidationProblem("Valid clinic and veterinarian details are required.");
+            return ValidationProblem("A clinic name of at most 200 characters and address of at most 500 characters are required.");
         }
 
         var clinic = new Clinic
@@ -53,10 +51,7 @@ public sealed class OnboardingController(ClinicDbContext dbContext, PlatformAcce
             Id = Guid.NewGuid().ToString(),
             Name = request.Name.Trim(),
             Address = request.Address.Trim(),
-            LogoUrl = request.LogoUrl.Trim(),
-            VeterinarianName = request.VeterinarianName.Trim(),
-            VeterinarianTitles = request.VeterinarianTitles.Trim(),
-            VeterinarianLicenseNumber = request.VeterinarianLicenseNumber.Trim()
+            LogoUrl = request.LogoUrl.Trim()
         };
         dbContext.Clinics.Add(clinic);
         await dbContext.SaveChangesAsync();
