@@ -27,6 +27,11 @@ public sealed class DevelopmentAuthenticationHandler(
             new Claim("oid", objectId),
             new Claim(ClaimTypes.Name, displayName)
         ], SchemeName);
+        var email = configuration["DevelopmentIdentity:Email"];
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            identity.AddClaim(new Claim("email", email));
+        }
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
     }
 }

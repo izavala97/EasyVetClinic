@@ -42,6 +42,7 @@ else
 }
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentClinic>();
+builder.Services.AddSingleton<PlatformAccess>();
 if (builder.Environment.IsDevelopment())
 {
 	builder.Services.AddAuthentication(DevelopmentAuthenticationHandler.SchemeName)

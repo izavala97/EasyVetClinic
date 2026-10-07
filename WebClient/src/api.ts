@@ -52,7 +52,16 @@ export type CurrentUser = {
   clinicId: string | null
   clinicName: string | null
   role: string | null
+  isPlatformOwner: boolean
+  isSuspended: boolean
+  clinics: ClinicMembership[]
 }
+
+export type ClinicMembership = { clinicId: string; clinicName: string; role: string; isSuspended: boolean }
+export type PlatformClinic = { id: string; name: string; isSuspended: boolean; suspensionReason: string; userCount: number }
+export type ClinicUser = { id: string; displayName: string; role: string; isActive: boolean }
+export type Invitation = { id: string; email: string; role: string; expiresAt: string; isUsed: boolean; isRevoked: boolean }
+export type CreatedInvitation = { invitation: Invitation; token: string }
 
 export type ConsultationHistoryItem = {
   id: string
@@ -121,6 +130,11 @@ export type SaleReceipt = {
 type AccessTokenProvider = () => Promise<string | null>
 
 let accessTokenProvider: AccessTokenProvider | undefined
+let selectedClinicId: string | null = null
+
+export function setSelectedClinicId(clinicId: string | null) {
+  selectedClinicId = clinicId
+}
 
 export function setAccessTokenProvider(provider: AccessTokenProvider | undefined) {
   accessTokenProvider = provider
@@ -132,6 +146,7 @@ function apiUrl(path: string): string {
 
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers)
+  if (selectedClinicId) headers.set('X-EasyVet-Clinic-Id', selectedClinicId)
   const accessToken = await accessTokenProvider?.()
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`)
@@ -142,9 +157,18 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
 
 export async function getJson<T>(path: string): Promise<T> {
   const response = await apiFetch(path)
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}.`)
-  }
+  await ensureSuccess(response)
 
   return response.json() as Promise<T>
+}
+
+export async function ensureSuccess(response: Response): Promise<void> {
+  if (response.ok) return
+  const body = await response.text()
+  let message = `Request failed with status ${response.status}.`
+  if (body && response.headers.get('content-type')?.includes('json')) {
+    const problem: { error?: string; detail?: string; title?: string } = JSON.parse(body)
+    message = problem.error ?? problem.detail ?? problem.title ?? message
+  }
+  throw new Error(message)
 }

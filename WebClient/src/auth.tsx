@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { BrowserCacheLocation, InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser'
 import { MsalProvider, useMsal } from '@azure/msal-react'
-import { type CurrentUser, getJson, setAccessTokenProvider } from './api'
+import { type CurrentUser, getJson, setAccessTokenProvider, setSelectedClinicId } from './api'
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID
@@ -31,11 +31,16 @@ type AuthenticationContextValue = {
   signIn: () => Promise<void>
   signOut: () => Promise<void>
   refreshCurrentUser: () => Promise<void>
+  selectClinic: (clinicId: string | null) => Promise<void>
 }
 
 const AuthenticationContext = createContext<AuthenticationContextValue | null>(null)
 
 export async function initializeAuthentication() {
+  if (window.location.pathname === '/invite' && window.location.hash.startsWith('#token=')) {
+    sessionStorage.setItem('clinicInvitation', window.location.hash.slice('#token='.length))
+    window.history.replaceState(null, '', '/invite')
+  }
   await msalInstance?.initialize()
 }
 
@@ -53,6 +58,7 @@ export function AuthenticationProvider({ children }: { children: ReactNode }) {
       signIn: async () => undefined,
       signOut: async () => undefined,
       refreshCurrentUser: async () => undefined,
+      selectClinic: async () => undefined,
     }}>{children}</AuthenticationContext.Provider>
   }
 
@@ -67,7 +73,9 @@ function DevelopmentAuthenticatedApplication({ children }: { children: ReactNode
   async function refreshCurrentUser() {
     setIsLoading(true)
     try {
-      setCurrentUser(await getJson<CurrentUser>('/api/me'))
+      const user = await getJson<CurrentUser>('/api/me')
+      setSelectedClinicId(user.clinicId)
+      setCurrentUser(user)
       setError(null)
     } catch {
       setCurrentUser(null)
@@ -90,6 +98,10 @@ function DevelopmentAuthenticatedApplication({ children }: { children: ReactNode
     signIn: async () => undefined,
     signOut: async () => undefined,
     refreshCurrentUser,
+    selectClinic: async (clinicId) => {
+      setSelectedClinicId(clinicId)
+      await refreshCurrentUser()
+    },
   }}>{children}</AuthenticationContext.Provider>
 }
 
@@ -122,7 +134,9 @@ function AuthenticatedApplication({ children }: { children: ReactNode }) {
 
     setIsLoading(true)
     try {
-      setCurrentUser(await getJson<CurrentUser>('/api/me'))
+      const user = await getJson<CurrentUser>('/api/me')
+      setSelectedClinicId(user.clinicId)
+      setCurrentUser(user)
       setError(null)
     } catch {
       setCurrentUser(null)
@@ -151,8 +165,15 @@ function AuthenticatedApplication({ children }: { children: ReactNode }) {
         setError(error instanceof Error ? error.message : 'Sign-in could not be started.')
       }
     },
-    signOut: async () => instance.logoutRedirect({ account: account ?? undefined }),
+    signOut: async () => {
+      setSelectedClinicId(null)
+      await instance.logoutRedirect({ account: account ?? undefined })
+    },
     refreshCurrentUser,
+    selectClinic: async (clinicId) => {
+      setSelectedClinicId(clinicId)
+      await refreshCurrentUser()
+    },
   }
 
   return <AuthenticationContext.Provider value={value}>{children}</AuthenticationContext.Provider>

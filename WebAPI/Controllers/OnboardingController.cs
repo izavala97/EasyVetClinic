@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using EasyVetClinic.Api.Authentication;
 using EasyVetClinic.Api.Data;
 using EasyVetClinic.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -10,42 +11,41 @@ namespace EasyVetClinic.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Authorize]
-public sealed class OnboardingController(ClinicDbContext dbContext) : ControllerBase
+public sealed class OnboardingController(ClinicDbContext dbContext, PlatformAccess platformAccess,
+    ILogger<OnboardingController> logger) : ControllerBase
 {
     [HttpGet("me")]
     public async Task<ActionResult<CurrentUserSummary>> GetCurrentUser()
     {
         var objectId = User.FindFirstValue("oid");
-        if (string.IsNullOrWhiteSpace(objectId))
-        {
-            return Forbid();
-        }
+        if (string.IsNullOrWhiteSpace(objectId)) return Forbid();
 
-        var membership = await dbContext.ClinicUsers.AsNoTracking()
-            .Include(user => user.Clinic)
-            .FirstOrDefaultAsync(user => user.EntraObjectId == objectId && user.IsActive);
-        var displayName = User.Identity?.Name ?? membership?.DisplayName ?? "Signed-in user";
-        return Ok(new CurrentUserSummary(objectId, displayName, membership?.ClinicId, membership?.Clinic?.Name, membership?.Role));
+        var isOwner = platformAccess.IsOwner(User);
+        var memberships = await dbContext.ClinicUsers.AsNoTracking().Include(user => user.Clinic)
+            .Where(user => user.EntraObjectId == objectId && user.IsActive).ToListAsync();
+        var clinics = isOwner
+            ? await dbContext.Clinics.AsNoTracking().OrderBy(clinic => clinic.Name)
+                .Select(clinic => new ClinicMembershipSummary(clinic.Id, clinic.Name, ClinicRoles.SuperAdmin, clinic.IsSuspended)).ToListAsync()
+            : memberships.Select(user => new ClinicMembershipSummary(user.ClinicId, user.Clinic.Name, user.Role, user.Clinic.IsSuspended)).ToList();
+        var selectedId = Request.Headers["X-EasyVet-Clinic-Id"].FirstOrDefault();
+        var selected = string.IsNullOrWhiteSpace(selectedId)
+            ? !isOwner && clinics.Count == 1 ? clinics[0] : null
+            : clinics.SingleOrDefault(clinic => clinic.ClinicId == selectedId);
+        if (!string.IsNullOrWhiteSpace(selectedId) && selected is null) return Forbid();
+
+        return Ok(new CurrentUserSummary(objectId, User.Identity?.Name ?? "Signed-in user",
+            selected?.ClinicId, selected?.ClinicName, selected?.Role, isOwner, selected?.IsSuspended ?? false, clinics));
     }
 
     [HttpPost("onboarding/clinic")]
-    public async Task<ActionResult<CurrentUserSummary>> CreateInitialClinic(CreateInitialClinicRequest request)
+    [RequirePlatformOwner]
+    public async Task<ActionResult<PlatformClinicSummary>> CreateClinic(CreateInitialClinicRequest request)
     {
-        var objectId = User.FindFirstValue("oid");
-        if (string.IsNullOrWhiteSpace(objectId))
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.VeterinarianName)
+            || request.Name.Length > 200 || request.VeterinarianName.Length > 200
+            || request.Address.Length > 500 || request.VeterinarianTitles.Length > 300 || request.VeterinarianLicenseNumber.Length > 100)
         {
-            return Forbid();
-        }
-
-        if (new[] { request.Name, request.VeterinarianName }.Any(string.IsNullOrWhiteSpace))
-        {
-            return ValidationProblem("Clinic and veterinarian names are required.");
-        }
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-        if (await dbContext.Clinics.AnyAsync())
-        {
-            return Conflict(new { error = "Initial clinic setup has already been completed." });
+            return ValidationProblem("Valid clinic and veterinarian details are required.");
         }
 
         var clinic = new Clinic
@@ -58,19 +58,9 @@ public sealed class OnboardingController(ClinicDbContext dbContext) : Controller
             VeterinarianTitles = request.VeterinarianTitles.Trim(),
             VeterinarianLicenseNumber = request.VeterinarianLicenseNumber.Trim()
         };
-        var displayName = User.Identity?.Name ?? "Clinic administrator";
         dbContext.Clinics.Add(clinic);
-        dbContext.ClinicUsers.Add(new ClinicUser
-        {
-            Id = Guid.NewGuid().ToString(),
-            ClinicId = clinic.Id,
-            EntraObjectId = objectId,
-            DisplayName = displayName,
-            Role = ClinicRoles.ClinicAdmin
-        });
         await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return Created("api/clinic", new CurrentUserSummary(objectId, displayName, clinic.Id, clinic.Name, ClinicRoles.ClinicAdmin));
+        logger.LogInformation("Platform owner {ActorId} created clinic {ClinicId}", User.FindFirstValue("oid"), clinic.Id);
+        return Created($"api/platform/clinics/{clinic.Id}", new PlatformClinicSummary(clinic.Id, clinic.Name, false, "", 0));
     }
 }

@@ -205,7 +205,18 @@ public sealed record DocumentDraft(
     string PreparedBy,
     IReadOnlyDictionary<string, string> Fields);
 
-public sealed record CurrentUserSummary(string ObjectId, string DisplayName, string? ClinicId, string? ClinicName, string? Role);
+public sealed record CurrentUserSummary(string ObjectId, string DisplayName, string? ClinicId, string? ClinicName,
+    string? Role, bool IsPlatformOwner, bool IsSuspended, IReadOnlyList<ClinicMembershipSummary> Clinics);
+
+public sealed record ClinicMembershipSummary(string ClinicId, string ClinicName, string Role, bool IsSuspended);
+public sealed record PlatformClinicSummary(string Id, string Name, bool IsSuspended, string SuspensionReason, int UserCount);
+public sealed record ClinicUserSummary(string Id, string DisplayName, string Role, bool IsActive);
+public sealed record UpdateClinicAccessRequest(bool IsSuspended, string Reason);
+public sealed record UpdateClinicUserRequest(string Role, bool IsActive);
+public sealed record CreateInvitationRequest(string Email, string Role);
+public sealed record AcceptInvitationRequest(string Token);
+public sealed record InvitationSummary(string Id, string Email, string Role, DateTimeOffset ExpiresAt, bool IsUsed, bool IsRevoked);
+public sealed record CreatedInvitation(InvitationSummary Invitation, string Token);
 
 public sealed record CreateInitialClinicRequest(
     string Name,

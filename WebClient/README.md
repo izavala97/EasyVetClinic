@@ -28,3 +28,7 @@ During development, Vite proxies `/api` and `/health` to `http://localhost:5120`
 Components, types, properties, API clients, and other technical identifiers use English. User-facing content will be localized through the client as the clinical workflows are completed.
 
 The client uses MSAL and bearer tokens in production. Local development uses the API development authentication handler so that clinic workflows can be tested without contacting Microsoft Entra.
+- Platform-owner administration for registering clinics, opening support workspaces, and manually suspending/restoring subscription access.
+- Clinic-admin staff management, role changes, deactivation/reactivation, and manually shared invitation links.
+- Signed-in invitation acceptance, explicit access-required/suspended screens, and authorized clinic selection in the sidebar.
+- Account details exposes the signed-in Entra object ID for secure owner configuration; see [deployment setup](../DEPLOYMENT.MD).

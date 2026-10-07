@@ -55,6 +55,15 @@ dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/
 | Method | Route | Description |
 | --- | --- | --- |
 | `GET` | `/health` | API health status. |
+| `GET` | `/api/me` | Identity, platform ownership, selected clinic, and active memberships including suspension status. |
+| `POST` | `/api/onboarding/clinic` | Register a clinic; configured platform owner only. |
+| `GET` | `/api/platform/clinics` | List all clinics, active user counts, and suspension reasons; owner only. |
+| `PUT` | `/api/platform/clinics/{clinicId}/access` | Suspend/restore a clinic; owner only. |
+| `GET` | `/api/clinic/users` | List members of the selected clinic; clinic administrator or owner. |
+| `PUT` | `/api/clinic/users/{userId}` | Update a clinic role or active status; protects the last active administrator. |
+| `GET`, `POST` | `/api/clinic/invitations` | List or create seven-day, single-use invitations; clinic administrator or owner. |
+| `DELETE` | `/api/clinic/invitations/{invitationId}` | Revoke an invitation in the selected clinic. |
+| `POST` | `/api/invitations/accept` | Accept a token with a matching verified email claim and create a clinic membership. |
 | `GET` | `/api/dashboard` | Active clinic dashboard summary. |
 | `GET` | `/api/patients?query=` | Search patients by pet, guardian, or phone number. |
 | `GET` | `/api/patients/{patientId}` | Retrieve a patient summary. |
@@ -75,4 +84,8 @@ dotnet ef migrations script --context SqlServerClinicDbContext --output scripts/
 
 ## Current State
 
-The API uses EF Core with SQLite for local development and a separate SQL Server migration history for production. Clinic identity is resolved from Easy Auth/External ID claims and active `ClinicUsers` memberships. The initial clinic can be created once by an authenticated user through `POST /api/onboarding/clinic`; this endpoint is unavailable after the first clinic exists. The API currently exposes product listing but not inventory product administration; create product records before using product sales.
+The API uses EF Core with SQLite for local development and a separate SQL Server migration history for production. Production validates Entra External ID bearer tokens. Clinic identity is resolved from the `oid` claim and active `ClinicUsers` memberships; suspended clinics deny member operational access. Only the configured `PlatformAdministration:OwnerObjectId` can register clinics and select arbitrary clinic workspaces for support. It is empty by default in production; local Development configures `local-developer` as owner. Owner support access and administrative mutations are logged.
+
+Invitations require matching authoritative `email`/`emails` claims on acceptance, retain only a hash of the token, and cannot grant platform ownership. They do not send email or create identity-provider accounts. See [the deployment checklist](../DEPLOYMENT.MD) for owner and verified-email configuration.
+
+The API currently exposes product listing but not inventory product administration; create product records before using product sales.

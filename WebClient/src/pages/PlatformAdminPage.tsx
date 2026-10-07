@@ -1,0 +1,56 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { apiFetch, ensureSuccess, getJson, type PlatformClinic } from '../api'
+import { useAuthentication } from '../auth'
+
+export function PlatformAdminPage() {
+  const { selectClinic, refreshCurrentUser } = useAuthentication()
+  const navigate = useNavigate()
+  const [clinics, setClinics] = useState<PlatformClinic[]>([])
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    void getJson<PlatformClinic[]>('/api/platform/clinics').then(setClinics)
+      .catch(error => setError(error instanceof Error ? error.message : 'Clinics could not be loaded.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function updateAccess(event: React.FormEvent<HTMLFormElement>, clinic: PlatformClinic) {
+    event.preventDefault()
+    const reason = String(new FormData(event.currentTarget).get('reason') ?? '')
+    setBusy(true)
+    setError('')
+    try {
+      await ensureSuccess(await apiFetch(`/api/platform/clinics/${clinic.id}/access`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSuspended: !clinic.isSuspended, reason }),
+      }))
+      await refreshCurrentUser()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Clinic access could not be updated.')
+    } finally { setBusy(false) }
+  }
+
+  async function openClinic(clinic: PlatformClinic) {
+    await selectClinic(clinic.id)
+    navigate('/clinic-admin')
+  }
+
+  return <>
+    <header className="page-header"><div><p className="eyebrow">Platform owner</p><h1>Platform administration</h1></div><Link className="primary-action" to="/onboarding">Register clinic</Link></header>
+    <p>Open any clinic workspace for support. Suspension blocks all clinic members immediately on their next API request; your support access remains available. Billing enforcement is manual, not connected to a payment provider.</p>
+    {error && <div className="notice error" role="alert">{error}</div>}
+    {loading ? <p className="loading-state">Loading clinics...</p> : clinics.length === 0 && <p>No clinics registered yet.</p>}
+    <div className="admin-list">{clinics.map(clinic => <article className="panel" key={clinic.id}>
+      <h2>{clinic.name}</h2><p>{clinic.userCount} active members · {clinic.isSuspended ? 'Suspended' : 'Active'}</p>
+      {clinic.isSuspended && <p>Reason: {clinic.suspensionReason}</p>}
+      <button type="button" className="secondary-action" disabled={busy} onClick={() => void openClinic(clinic)}>Open support workspace / manage staff</button>
+      <form className="admin-access-form" onSubmit={event => void updateAccess(event, clinic)}>
+        {!clinic.isSuspended && <label>Suspension reason<input name="reason" maxLength={500} required placeholder="Subscription unpaid" /></label>}
+        <button type="submit" className="secondary-action" disabled={busy}>{clinic.isSuspended ? 'Restore clinic access' : 'Suspend clinic access'}</button>
+      </form>
+    </article>)}</div>
+  </>
+}

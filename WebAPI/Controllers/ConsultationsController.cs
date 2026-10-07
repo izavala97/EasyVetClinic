@@ -10,6 +10,7 @@ namespace EasyVetClinic.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Authorize]
+[RequireClinicAccess]
 public sealed class ConsultationsController(ClinicDbContext dbContext, CurrentClinic currentClinic) : ControllerBase
 {
     private string ClinicId => currentClinic.Id;
@@ -168,7 +169,7 @@ public sealed class ConsultationsController(ClinicDbContext dbContext, CurrentCl
         }
 
         var isCompleted = consultation.Status == "Completed";
-        var isClinicOwner = HttpContext.User.IsInRole(ClinicRoles.ClinicAdmin) || HttpContext.User.IsInRole(ClinicRoles.SuperAdmin);
+        var isClinicOwner = currentClinic.Role is ClinicRoles.ClinicAdmin or ClinicRoles.SuperAdmin;
         if (isCompleted && !isClinicOwner)
         {
             return Forbid();

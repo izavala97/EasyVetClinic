@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Building2, Save } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '../api'
+import { apiFetch, ensureSuccess } from '../api'
 import { useAuthentication } from '../auth'
 
 export function OnboardingPage() {
@@ -28,15 +28,15 @@ export function OnboardingPage() {
           veterinarianLicenseNumber: form.get('veterinarianLicenseNumber'),
         }),
       })
-      if (!response.ok) throw new Error()
+      await ensureSuccess(response)
       await refreshCurrentUser()
-      navigate('/', { replace: true })
-    } catch {
-      setError('The clinic could not be created. It may already have been initialized by another administrator.')
+      navigate('/platform', { replace: true })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The clinic could not be created.')
     } finally {
       setIsSaving(false)
     }
   }
 
-  return <main className="onboarding-shell"><section className="panel onboarding-panel"><header className="page-header"><div><p className="eyebrow">Initial setup</p><h1>Create your clinic</h1></div><Building2 size={28} /></header><p>This one-time setup creates the clinic and gives your signed-in account administrator access.</p>{error && <div className="notice error" role="alert">{error}</div>}<form className="clinic-profile-form" onSubmit={(event) => void createClinic(event)}><label>Clinic name<input name="name" required /></label><label>Address<input name="address" /></label><label>Logo URL<input name="logoUrl" type="url" /></label><label>Veterinarian name<input name="veterinarianName" required /></label><label>Titles and specialties<input name="veterinarianTitles" /></label><label>Professional license number<input name="veterinarianLicenseNumber" /></label><button className="primary-action" type="submit" disabled={isSaving}><Save size={18} />{isSaving ? 'Creating clinic...' : 'Create clinic'}</button></form></section></main>
+  return <main className="onboarding-shell"><section className="panel onboarding-panel"><header className="page-header"><div><p className="eyebrow">Platform setup</p><h1>Register a clinic</h1></div><Building2 size={28} /></header><p>After creating the clinic, open its workspace and invite its first clinic administrator from Clinic administration.</p>{error && <div className="notice error" role="alert">{error}</div>}<form className="clinic-profile-form" onSubmit={(event) => void createClinic(event)}><label>Clinic name<input name="name" maxLength={200} required /></label><label>Address<input name="address" maxLength={500} /></label><label>Logo URL<input name="logoUrl" type="url" /></label><label>Veterinarian name<input name="veterinarianName" maxLength={200} required /></label><label>Titles and specialties<input name="veterinarianTitles" maxLength={300} /></label><label>Professional license number<input name="veterinarianLicenseNumber" maxLength={100} /></label><button className="primary-action" type="submit" disabled={isSaving}><Save size={18} />{isSaving ? 'Creating clinic...' : 'Create clinic'}</button></form></section></main>
 }

@@ -1,4 +1,5 @@
 using EasyVetClinic.Api.Data;
+using EasyVetClinic.Api.Authentication;
 using EasyVetClinic.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace EasyVetClinic.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Authorize]
+[RequireClinicAccess]
 public sealed class GuardiansController(ClinicDbContext dbContext, CurrentClinic currentClinic) : ControllerBase
 {
     private string ClinicId => currentClinic.Id;

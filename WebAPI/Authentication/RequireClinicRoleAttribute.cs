@@ -10,7 +10,7 @@ public sealed class RequireClinicRoleAttribute(params string[] roles) : Attribut
     public Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var currentClinic = context.HttpContext.RequestServices.GetRequiredService<CurrentClinic>();
-        if (!roles.Contains(currentClinic.Role, StringComparer.Ordinal))
+        if (currentClinic.Role != ClinicRoles.SuperAdmin && !roles.Contains(currentClinic.Role, StringComparer.Ordinal))
         {
             context.Result = new ForbidResult();
         }

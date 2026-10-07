@@ -94,13 +94,16 @@ This checklist describes the Azure resources and configuration needed before pro
 
 ## 8. Initial access setup
 
-- The first authenticated External ID user creates the initial clinic through `POST /api/onboarding/clinic`; that operation creates an active `ClinicAdmin` membership and is rejected once any clinic exists.
-- The onboarding request requires a valid External ID bearer token and is never available anonymously.
-- `GET /api/me` returns the authenticated user and current membership context for the frontend shell. A user without a membership receives identity context with no clinic values and can be routed to initial onboarding after browser sign-in is implemented.
-- Create the super administrator Entra user and map their Entra object ID to the `SuperAdmin` role when platform-level administration is introduced.
-- Create each clinic and map clinic administrators, veterinarians, and staff through `ClinicUsers`.
-- Verify every production user has an active clinic membership before granting access.
-- For users assigned to multiple clinics, have the SPA send `X-EasyVet-Clinic-Id` after the user selects an authorized clinic. The API verifies this header against the authenticated user's memberships.
+- Sign in to the web app as `maizorin@hotmail.es` using the EasyVetClinic External ID tenant. Expand **Account details** in the sidebar and copy the **Entra object ID** (also returned by authenticated `GET /api/me`). This is the tenant-specific `oid`, not the SPA application ID or an object ID from another tenant.
+- Set the API App Service setting `PlatformAdministration__OwnerObjectId` to that exact object ID. Restart/reload and verify **Platform administration** appears only for that account. Keep the value empty until the correct account is confirmed. Ownership is never inferred from an email or a clinic's `SuperAdmin` membership.
+- The owner creates clinics through **Register clinic** (`POST /api/onboarding/clinic`). Multiple clinics are supported; there is no first-user-wins bootstrap and no automatic clinic membership for the owner.
+- The owner opens each clinic workspace and creates a `ClinicAdmin` invitation from **Clinic administration**. Copy the generated link and send it manually to the intended administrator. That administrator signs in with the matching email and accepts the invitation, then invites veterinarians and staff.
+- Configure the API access token to emit an authoritative, verified `email` or `emails` claim from the External ID sign-in flow. Do not map an editable profile attribute or `preferred_username` as a verified email. Acceptance is denied if the token does not contain the invited email. Test this in production before sending invitations; the app does not create Entra users or send mail itself.
+- Invitation links expire after seven days, are single-use, and can be revoked by an administrator. Share links privately. The plaintext token is shown only on creation; the database stores its SHA-256 hash. The frontend temporarily retains the token in tab-scoped session storage across sign-in/account switching and clears it on acceptance/cancellation.
+- `GET /api/me` returns owner status and all active memberships with suspension flags. Unassigned users see access instructions rather than clinic registration.
+- The SPA sends `X-EasyVet-Clinic-Id` for the selected workspace. The API verifies membership and clinic suspension on every request; only the configured platform owner can select arbitrary clinics for support.
+- Use **Platform administration** to manually suspend/restore a clinic. Suspension blocks all member operational access and invitation acceptance without deleting data. Owner support access remains available and is logged. Automatic payment-provider integration is not implemented.
+- Both SQLite and SQL Server migration sets include `AddClinicAdministration`; apply the matching migration set before using these screens. Existing clinic memberships are retained.
 - Assign only `ClinicAdmin` or `Veterinarian` to users who may create clinical entries, administer vaccinations, record weights, or edit prescriptions. Only `ClinicAdmin` and `SuperAdmin` may edit clinic profile credentials.
 
 ## Before Go-Live

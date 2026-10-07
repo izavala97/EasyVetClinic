@@ -1,4 +1,16 @@
 .application-shell { min-height: 100vh; display: grid; grid-template-columns: 252px minmax(0, 1fr); background: #fbf8f3; }
+.clinic-selector { display: grid; gap: 6px; margin-bottom: 18px; font-size: 12px; color: #36544d; }
+.clinic-selector select, .clinic-profile-form select, .admin-member select, .admin-access-form input { width: 100%; padding: 10px; border: 1px solid #dcd4c9; border-radius: 5px; background: #fffdf9; color: #36544d; }
+.admin-list { display: grid; gap: 16px; }
+.admin-section { margin-top: 20px; }
+.admin-member { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid #eee5da; }
+.admin-member label, .admin-access-form label { display: grid; gap: 6px; font-size: 12px; color: #36544d; }
+.admin-member p { margin-bottom: 0; }
+.admin-access-form { display: grid; gap: 12px; margin-top: 16px; }
+.invitation-link { display: block; width: 100%; padding: 10px; margin-top: 8px; }
+.account-details { margin-top: 24px; font-size: 12px; color: #36544d; overflow-wrap: anywhere; }
+.account-details p { margin: 10px 0 4px; }
+button:disabled { opacity: .6; cursor: not-allowed; }
 .sidebar { background: #e7f0e5; border-right: 1px solid #d2dfcf; padding: 28px 18px 20px; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 9px; font-family: Fraunces, serif; font-size: 24px; color: #285e56; padding: 0 10px 44px; } .brand span { color: #e77470; }
 nav { display: grid; gap: 5px; } nav a { color: #4e665e; text-decoration: none; padding: 11px 12px; border-radius: 6px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; } nav a.active, nav a:hover { background: #fff9f3; color: #234a44; }

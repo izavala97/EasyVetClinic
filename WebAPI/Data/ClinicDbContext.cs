@@ -6,6 +6,7 @@ public class ClinicDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<Clinic> Clinics => Set<Clinic>();
     public DbSet<ClinicUser> ClinicUsers => Set<ClinicUser>();
+    public DbSet<ClinicInvitation> ClinicInvitations => Set<ClinicInvitation>();
     public DbSet<Guardian> Guardians => Set<Guardian>();
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientGuardian> PatientGuardians => Set<PatientGuardian>();
@@ -29,6 +30,17 @@ public class ClinicDbContext(DbContextOptions options) : DbContext(options)
             entity.Property(clinic => clinic.VeterinarianName).HasMaxLength(200);
             entity.Property(clinic => clinic.VeterinarianTitles).HasMaxLength(300);
             entity.Property(clinic => clinic.VeterinarianLicenseNumber).HasMaxLength(100);
+            entity.Property(clinic => clinic.SuspensionReason).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<ClinicInvitation>(entity =>
+        {
+            entity.HasKey(invitation => invitation.Id);
+            entity.Property(invitation => invitation.Email).HasMaxLength(254).IsRequired();
+            entity.Property(invitation => invitation.Role).HasMaxLength(50).IsRequired();
+            entity.Property(invitation => invitation.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(invitation => invitation.TokenHash).IsUnique();
+            entity.HasOne(invitation => invitation.Clinic).WithMany().HasForeignKey(invitation => invitation.ClinicId);
         });
 
         modelBuilder.Entity<Guardian>(entity =>

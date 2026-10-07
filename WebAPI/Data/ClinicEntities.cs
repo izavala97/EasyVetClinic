@@ -9,6 +9,8 @@ public sealed class Clinic
     public string VeterinarianName { get; set; } = string.Empty;
     public string VeterinarianTitles { get; set; } = string.Empty;
     public string VeterinarianLicenseNumber { get; set; } = string.Empty;
+    public bool IsSuspended { get; set; }
+    public string SuspensionReason { get; set; } = string.Empty;
     public List<Guardian> Guardians { get; } = [];
     public List<ClinicUser> Users { get; } = [];
     public List<Patient> Patients { get; } = [];
@@ -198,4 +200,17 @@ public static class ClinicRoles
     public const string ClinicAdmin = "ClinicAdmin";
     public const string Veterinarian = "Veterinarian";
     public const string Staff = "Staff";
+}
+
+public sealed class ClinicInvitation
+{
+    public string Id { get; set; } = string.Empty;
+    public string ClinicId { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = ClinicRoles.Staff;
+    public string TokenHash { get; set; } = string.Empty;
+    public DateTimeOffset ExpiresAt { get; set; }
+    public bool IsUsed { get; set; }
+    public bool IsRevoked { get; set; }
+    public Clinic Clinic { get; set; } = null!;
 }

@@ -10,6 +10,7 @@ namespace EasyVetClinic.Api.Controllers;
 [ApiController]
 [Route("api")]
 [Authorize]
+[RequireClinicAccess]
 public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic currentClinic) : ControllerBase
 {
     private string ClinicId => currentClinic.Id;
