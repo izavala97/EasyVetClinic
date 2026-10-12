@@ -42,6 +42,8 @@ Require(appointment.DurationMinutes == 30 && appointment.Status == "Scheduled" &
     "Existing appointments require duration 30, Scheduled status, and version 1.");
 Require((await db.Clinics.SingleAsync(item => item.Id == "upgrade-clinic")).TimeZoneId == "UTC",
     "Existing clinics require UTC.");
+Require((await db.Clinics.SingleAsync(item => item.Id == "upgrade-clinic")).Language == "en",
+    "Existing clinics require English until an administrator selects another language.");
 var obsoleteClinicColumns = await db.Database.SqlQueryRaw<int>("""
     SELECT COUNT(*) AS Value FROM pragma_table_info('Clinics')
     WHERE name IN ('VeterinarianName', 'VeterinarianTitles', 'VeterinarianLicenseNumber')
@@ -53,7 +55,7 @@ Require(movements.Count == 1 && movements[0].QuantityChange == 17m && movements[
 await migrator.MigrateAsync();
 Require(await db.InventoryMovements.CountAsync(item => item.ProductId == product.Id) == 1,
     "Repeated migration must not duplicate opening inventory.");
-Console.WriteLine("Pre-commerce populated SQLite upgrade checks passed: 9");
+Console.WriteLine("Pre-commerce populated SQLite upgrade checks passed: 10");
 
 static void Require(bool condition, string message)
 {

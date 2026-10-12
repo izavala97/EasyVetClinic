@@ -163,13 +163,15 @@ public sealed record ClinicProfile(
     string Name,
     string Address,
     string LogoUrl,
-    string TimeZoneId);
+    string TimeZoneId,
+    string Language);
 
 public sealed record UpdateClinicProfileRequest(
     string Name,
     string Address,
     string LogoUrl,
-    string TimeZoneId = "UTC");
+    string TimeZoneId = "UTC",
+    string? Language = null);
 
 public sealed record ConsultationSummary(
     string Id,

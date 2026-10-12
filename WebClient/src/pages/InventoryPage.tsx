@@ -1,3 +1,5 @@
+import { formatDateTime } from '../format'
+import { useTranslation } from '../useTranslation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, ArrowDownToLine, ClipboardList, Package, Plus, RefreshCw } from 'lucide-react'
 import { useAuthentication } from '../auth'
@@ -5,9 +7,11 @@ import { CommerceError, commerceApi, type CatalogItem, type InventoryAdjustment,
 import { parsePendingAdjustment } from '../commerceOperations'
 import '../commerce.css'
 
-const timestamp = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+const timestamp = { format: formatDateTime }
 
 export function InventoryPage() {
+  const { t } = useTranslation()
+
   const { currentUser } = useAuthentication()
   const canAdjust = currentUser?.role === 'ClinicAdmin' || currentUser?.role === 'SuperAdmin' || currentUser?.isPlatformOwner === true
   const [items, setItems] = useState<CatalogItem[]>([])
@@ -87,12 +91,12 @@ export function InventoryPage() {
           sessionStorage.removeItem(pendingStorageKey)
           setPendingAdjustment(null)
         } catch (storageFailure) {
-          setError(`The stock movement result must be reconciled before proceeding. Pending operation storage could not be cleared: ${storageFailure instanceof Error ? storageFailure.message : 'Storage unavailable.'}`)
+          setError(t("The stock movement result must be reconciled before proceeding. Pending operation storage could not be cleared: {{value0}}", { value0: t(storageFailure instanceof Error ? storageFailure.message : 'Storage unavailable.') }))
           setReviewRequired(true)
           return
         }
       }
-      setError(`${failure instanceof Error ? failure.message : 'The inventory change could not be saved.'}${uncertain ? ' The result is uncertain. Retry the same operation to confirm it without recording stock twice.' : saved ? ' The movement was saved, but the inventory view could not be refreshed.' : ''}`)
+      setError(t("{{value0}}{{value1}}", { value0: t(failure instanceof Error ? failure.message : 'The inventory change could not be saved.'), value1: uncertain ? ` ${t('The result is uncertain. Retry the same operation to confirm it without recording stock twice.')}` : saved ? ` ${t('The movement was saved, but the inventory view could not be refreshed.')}` : '' }))
       setReviewRequired(true)
     } finally {
       mutationLock.current = false
@@ -136,33 +140,33 @@ export function InventoryPage() {
   }
 
   return <>
-    <header className="page-header"><div><p className="eyebrow">Commercial</p><h1>Inventory</h1><p className="commerce-subtitle">Track stock, receive deliveries, and record adjustments.</p></div><Package size={26} /></header>
-    {notice && <div className="notice" role="status">{notice}</div>}
-    {error && <div className="notice error" role="alert">{error}{reviewRequired && <button className="secondary-action refresh-commerce" type="button" disabled={busy || loading} onClick={() => void refreshAfterFailure()}>Refresh inventory and history</button>}</div>}
-    {pendingAdjustment && <div className="notice" role="status">Unconfirmed stock movement: {pendingAdjustment.quantityChange} units · {pendingAdjustment.reason}<button className="secondary-action refresh-commerce" type="button" disabled={busy || loading || !canAdjust} onClick={() => void recordAdjustment(pendingAdjustment)}>Retry the same stock movement</button></div>}
+    <header className="page-header"><div><p className="eyebrow">{t("Commercial")}</p><h1>{t("Inventory")}</h1><p className="commerce-subtitle">{t("Track stock, receive deliveries, and record adjustments.")}</p></div><Package size={26} /></header>
+    {notice && <div className="notice" role="status">{t(notice)}</div>}
+    {error && <div className="notice error" role="alert">{t(error)}{reviewRequired && <button className="secondary-action refresh-commerce" type="button" disabled={busy || loading} onClick={() => void refreshAfterFailure()}>{t("Refresh inventory and history")}</button>}</div>}
+    {pendingAdjustment && <div className="notice" role="status">{t("Unconfirmed stock movement:")} {pendingAdjustment.quantityChange} {t("units ·")} {pendingAdjustment.reason}<button className="secondary-action refresh-commerce" type="button" disabled={busy || loading || !canAdjust} onClick={() => void recordAdjustment(pendingAdjustment)}>{t("Retry the same stock movement")}</button></div>}
     <section className="metrics commerce-metrics">
-      <article><strong>Tracked products</strong><span>{trackedItems.length}</span></article>
-      <article className={lowStock.length ? 'metric-warning' : ''}><strong>Low stock</strong><span>{lowStock.length}</span></article>
-      <article><strong>Recent movements</strong><span>{history.length}</span></article>
+      <article><strong>{t("Tracked products")}</strong><span>{trackedItems.length}</span></article>
+      <article className={lowStock.length ? 'metric-warning' : ''}><strong>{t("Low stock")}</strong><span>{lowStock.length}</span></article>
+      <article><strong>{t("Recent movements")}</strong><span>{history.length}</span></article>
     </section>
-    {lowStock.length > 0 && <section className="panel low-stock-panel"><div className="panel-heading"><div><p className="eyebrow">Reorder attention</p><h2>Low-stock products</h2></div><AlertTriangle size={22} /></div><div className="commerce-list">{lowStock.map(item => <div className="commerce-list-row" key={item.id}><div className="commerce-item-info"><strong>{item.name}</strong><span>{item.category || 'Uncategorized'}</span></div><strong>{item.stockOnHand ?? 0} in stock{item.lowStockThreshold !== null ? ` · threshold ${item.lowStockThreshold}` : ''}</strong></div>)}</div></section>}
+    {lowStock.length > 0 && <section className="panel low-stock-panel"><div className="panel-heading"><div><p className="eyebrow">{t("Reorder attention")}</p><h2>{t("Low-stock products")}</h2></div><AlertTriangle size={22} /></div><div className="commerce-list">{lowStock.map(item => <div className="commerce-list-row" key={item.id}><div className="commerce-item-info"><strong>{item.name}</strong><span>{item.category || t("Uncategorized")}</span></div><strong>{item.stockOnHand ?? 0} {t("in stock")}{item.lowStockThreshold !== null ? ` · ${t('threshold {{value0}}', { value0: item.lowStockThreshold })}` : ''}</strong></div>)}</div></section>}
     <section className="inventory-layout">
       <form className="panel commerce-form" onSubmit={event => void submit(event)}>
-        <div className="panel-heading"><div><p className="eyebrow">Stock operations</p><h2>Receive or adjust</h2></div><ArrowDownToLine size={22} /></div>
-        {canAdjust ? <fieldset className="commerce-fields" disabled={busy || !!pendingAdjustment}><label>Operation<select value={operation} onChange={event => setOperation(event.target.value as 'receive' | 'adjust')}><option value="receive">Receive stock</option><option value="adjust">Adjust stock</option></select></label>
-        <label>Product<select required value={productId} onChange={event => setProductId(event.target.value)}><option value="">Select a product</option>{trackedItems.map(item => <option key={item.id} value={item.id}>{item.name} · {item.stockOnHand} in stock</option>)}</select></label>
-        <label>{operation === 'receive' ? 'Quantity received' : 'Adjustment (+/-)'}<input type="number" step="0.001" min={operation === 'receive' ? '0.001' : undefined} required value={quantity} onChange={event => setQuantity(event.target.value)} placeholder={operation === 'receive' ? 'e.g. 12' : 'e.g. 3 or -2'} /></label>
-        <label>Reason<input required maxLength={250} value={reason} onChange={event => setReason(event.target.value)} placeholder={operation === 'receive' ? 'Supplier delivery, invoice, or reference' : 'Count correction or damaged stock'} /></label>
-        <button className="primary-action" type="submit" disabled={busy || loading || reviewRequired || trackedItems.length === 0}><Plus size={17} />{busy ? 'Saving...' : operation === 'receive' ? 'Record received stock' : 'Save adjustment'}</button></fieldset> : <p className="empty-state">Only clinic administrators can receive or adjust stock.</p>}
+        <div className="panel-heading"><div><p className="eyebrow">{t("Stock operations")}</p><h2>{t("Receive or adjust")}</h2></div><ArrowDownToLine size={22} /></div>
+        {canAdjust ? <fieldset className="commerce-fields" disabled={busy || !!pendingAdjustment}><label>{t("Operation")}<select value={operation} onChange={event => setOperation(event.target.value as 'receive' | 'adjust')}><option value="receive">{t("Receive stock")}</option><option value="adjust">{t("Adjust stock")}</option></select></label>
+        <label>{t("Product")}<select required value={productId} onChange={event => setProductId(event.target.value)}><option value="">{t("Select a product")}</option>{trackedItems.map(item => <option key={item.id} value={item.id}>{item.name} · {item.stockOnHand} {t("in stock")}</option>)}</select></label>
+        <label>{operation === 'receive' ? t("Quantity received") : t("Adjustment (+/-)")}<input type="number" step="0.001" min={operation === 'receive' ? '0.001' : undefined} required value={quantity} onChange={event => setQuantity(event.target.value)} placeholder={operation === 'receive' ? t("e.g. 12") : t("e.g. 3 or -2")} /></label>
+        <label>{t("Reason")}<input required maxLength={250} value={reason} onChange={event => setReason(event.target.value)} placeholder={operation === 'receive' ? t("Supplier delivery, invoice, or reference") : t("Count correction or damaged stock")} /></label>
+        <button className="primary-action" type="submit" disabled={busy || loading || reviewRequired || trackedItems.length === 0}><Plus size={17} />{busy ? t("Saving...") : operation === 'receive' ? t("Record received stock") : t("Save adjustment")}</button></fieldset> : <p className="empty-state">{t("Only clinic administrators can receive or adjust stock.")}</p>}
       </form>
       <section className="panel">
-        <div className="panel-heading"><div><p className="eyebrow">On hand</p><h2>Stock levels</h2></div><button className="icon-button" type="button" disabled={busy || loading} onClick={() => { setLoading(true); setError(''); void load().catch((failure: unknown) => setError(failure instanceof Error ? failure.message : 'Inventory could not be refreshed.')).finally(() => setLoading(false)) }} aria-label="Refresh inventory"><RefreshCw size={16} /></button></div>
-        {loading ? <p className="loading-state">Loading inventory...</p> : trackedItems.length === 0 ? <p className="empty-state">There are no tracked products in the catalog.</p> : <div className="commerce-list">{trackedItems.map(item => <article className="commerce-list-row" key={item.id}><div className="commerce-item-info"><strong>{item.name}</strong><span>{item.category || 'Uncategorized'}</span></div><div className="stock-count"><strong>{item.stockOnHand}</strong><small>in stock</small></div></article>)}</div>}
+        <div className="panel-heading"><div><p className="eyebrow">{t("On hand")}</p><h2>{t("Stock levels")}</h2></div><button className="icon-button" type="button" disabled={busy || loading} onClick={() => { setLoading(true); setError(''); void load().catch((failure: unknown) => setError(failure instanceof Error ? failure.message : 'Inventory could not be refreshed.')).finally(() => setLoading(false)) }} aria-label={t("Refresh inventory")}><RefreshCw size={16} /></button></div>
+        {loading ? <p className="loading-state">{t("Loading inventory...")}</p> : trackedItems.length === 0 ? <p className="empty-state">{t("There are no tracked products in the catalog.")}</p> : <div className="commerce-list">{trackedItems.map(item => <article className="commerce-list-row" key={item.id}><div className="commerce-item-info"><strong>{item.name}</strong><span>{item.category || t("Uncategorized")}</span></div><div className="stock-count"><strong>{item.stockOnHand}</strong><small>{t("in stock")}</small></div></article>)}</div>}
       </section>
     </section>
     <section className="panel inventory-history">
-      <div className="panel-heading"><div><p className="eyebrow">Audit trail</p><h2>Inventory history</h2></div><ClipboardList size={22} /></div>
-      {loading ? <p className="loading-state">Loading history...</p> : history.length === 0 ? <p className="empty-state">No inventory movements have been recorded.</p> : <div className="commerce-table-wrap"><table className="commerce-table"><thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Change</th><th>Stock after</th><th>Reason</th><th>Account</th></tr></thead><tbody>{history.map(entry => <tr key={entry.id}><td>{timestamp.format(new Date(entry.createdAt))}</td><td>{entry.productName}{entry.sku ? ` · ${entry.sku}` : ''}</td><td>{entry.type}</td><td>{entry.quantityChange > 0 ? '+' : ''}{entry.quantityChange}</td><td>{entry.balanceAfter}</td><td>{entry.reason}</td><td>{entry.billingAccountId ?? '—'}</td></tr>)}</tbody></table></div>}
+      <div className="panel-heading"><div><p className="eyebrow">{t("Audit trail")}</p><h2>{t("Inventory history")}</h2></div><ClipboardList size={22} /></div>
+      {loading ? <p className="loading-state">{t("Loading history...")}</p> : history.length === 0 ? <p className="empty-state">{t("No inventory movements have been recorded.")}</p> : <div className="commerce-table-wrap"><table className="commerce-table"><thead><tr><th>{t("Date")}</th><th>{t("Product")}</th><th>{t("Type")}</th><th>{t("Change")}</th><th>{t("Stock after")}</th><th>{t("Reason")}</th><th>{t("Account")}</th></tr></thead><tbody>{history.map(entry => <tr key={entry.id}><td>{timestamp.format(new Date(entry.createdAt))}</td><td>{entry.productName}{entry.sku ? ` · ${entry.sku}` : ''}</td><td>{t(entry.type)}</td><td>{entry.quantityChange > 0 ? '+' : ''}{entry.quantityChange}</td><td>{entry.balanceAfter}</td><td>{entry.reason}</td><td>{entry.billingAccountId ?? '—'}</td></tr>)}</tbody></table></div>}
     </section>
   </>
 }

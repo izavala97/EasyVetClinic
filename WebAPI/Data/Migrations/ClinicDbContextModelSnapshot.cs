@@ -323,6 +323,13 @@ namespace EasyVetClinic.Api.Data.Migrations
                     b.Property<bool>("IsSuspended")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("en");
+
                     b.Property<string>("LogoUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");

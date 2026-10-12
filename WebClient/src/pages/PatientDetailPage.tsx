@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ClipboardPlus, FileText, Pencil, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -13,6 +15,8 @@ const documentOptions = [
 ]
 
 export function PatientDetailPage() {
+  const { t } = useTranslation()
+
   const { patientId } = useParams()
   const navigate = useNavigate()
   const { currentUser } = useAuthentication()
@@ -109,23 +113,23 @@ export function PatientDetailPage() {
   }
 
   if (error && !patient) {
-    return <><Link className="back-link" to="/patients"><ArrowLeft size={16} /> Back to patients</Link><div className="notice error" role="alert">{error}</div></>
+    return <><Link className="back-link" to="/patients"><ArrowLeft size={16} />{t("Back to patients")}</Link><div className="notice error" role="alert">{t(error)}</div></>
   }
 
-  if (!patient) return <p className="loading-state">Loading patient record...</p>
+  if (!patient) return <p className="loading-state">{t("Loading patient record...")}</p>
 
   return (
     <>
-      <Link className="back-link" to="/patients"><ArrowLeft size={16} /> Back to patients</Link>
+      <Link className="back-link" to="/patients"><ArrowLeft size={16} />{t("Back to patients")}</Link>
       <header className="topbar patient-page-title">
-        <div className="patient-title"><span className="pet-avatar large">{patient.name[0]}</span><div><p className="eyebrow">Clinical record</p><h1>{patient.name}</h1><p>{patient.breed} · {patient.sex}</p></div></div>
-        {clinicalAccess && <div className="workflow-controls clinician-start"><label>Treating clinician<select value={clinicianId} onChange={event => setClinicianId(event.target.value)}>
-          <option value="">Select clinician</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}
-        </select></label><button className="primary-action" type="button" disabled={starting || !clinicianId} onClick={() => void startConsultation()}><ClipboardPlus size={18} /> Start consultation</button></div>}
+        <div className="patient-title"><span className="pet-avatar large">{patient.name[0]}</span><div><p className="eyebrow">{t("Clinical record")}</p><h1>{patient.name}</h1><p>{patient.breed} · {t(patient.sex)}</p></div></div>
+        {clinicalAccess && <div className="workflow-controls clinician-start"><label>{t("Treating clinician")}<select value={clinicianId} onChange={event => setClinicianId(event.target.value)}>
+          <option value="">{t("Select clinician")}</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}
+        </select></label><button className="primary-action" type="button" disabled={starting || !clinicianId} onClick={() => void startConsultation()}><ClipboardPlus size={18} />{t("Start consultation")}</button></div>}
       </header>
-      {error && <div className="notice error" role="alert">{error}</div>}
+      {error && <div className="notice error" role="alert">{t(error)}</div>}
       <PatientCareTimeline patientId={patient.id} onWeightSaved={() => void getJson<Patient>(`/api/patients/${patient.id}`).then(setPatient).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'Patient could not be refreshed.'))} />
-      <section className="panel"><label>Primary guardian<select value={patient.guardianId} onChange={event => {
+      <section className="panel"><label>{t("Primary guardian")}<select value={patient.guardianId} onChange={event => {
         const guardianId = event.target.value
         void apiFetch(`/api/patients/${patient.id}/primary-guardian/${guardianId}`, { method: 'PUT' })
           .then(ensureSuccess).then(() => getJson<Patient>(`/api/patients/${patient.id}`)).then(setPatient)
@@ -133,35 +137,35 @@ export function PatientDetailPage() {
       }}>{patient.guardians.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></section>
       <section className="content-grid patient-record-grid">
         <section className="panel">
-          <div className="panel-heading"><div><p className="eyebrow">Patient overview</p><h2>Record details</h2></div><button className="icon-button" type="button" aria-label="Edit patient" onClick={() => setEditingPatient(value => !value)}><Pencil size={17} /></button></div>
+          <div className="panel-heading"><div><p className="eyebrow">{t("Patient overview")}</p><h2>{t("Record details")}</h2></div><button className="icon-button" type="button" aria-label={t("Edit patient")} onClick={() => setEditingPatient(value => !value)}><Pencil size={17} /></button></div>
           {editingPatient ? <form className="record-edit-form" onSubmit={savePatient}>
-            <label>Name<input name="name" defaultValue={patient.name} required /></label>
-            <label>Species<input name="species" defaultValue={patient.species} required /></label>
-            <label>Breed<input name="breed" defaultValue={patient.breed} /></label>
-            <label>Sex<input name="sex" defaultValue={patient.sex} /></label>
-            <label>Weight summary<input name="weight" defaultValue={patient.weight} /></label>
-            <label>Color<input name="color" defaultValue={patient.color} /></label>
-            <label>Allergies<input name="allergies" defaultValue={patient.allergies.join('; ')} /></label>
-            <label>Distinguishing features<input name="distinguishingFeatures" defaultValue={patient.distinguishingFeatures} /></label>
-            <label>Date of birth<input name="dateOfBirth" type="date" defaultValue={patient.dateOfBirth ?? ''} /></label>
-            <label>Photo URL<input name="photoUrl" type="url" defaultValue={patient.photoUrl} /></label>
-            <label className="toggle-field"><input name="isActive" type="checkbox" defaultChecked={patient.isActive} /> Active patient</label>
-            <button className="secondary-action" type="submit"><Save size={16} /> Save patient</button>
+            <label>{t("Name")}<input name="name" defaultValue={patient.name} required /></label>
+            <label>{t("Species")}<input name="species" defaultValue={patient.species} required /></label>
+            <label>{t("Breed")}<input name="breed" defaultValue={patient.breed} /></label>
+            <label>{t("Sex")}<input name="sex" defaultValue={patient.sex} /></label>
+            <label>{t("Weight summary")}<input name="weight" defaultValue={patient.weight} /></label>
+            <label>{t("Color")}<input name="color" defaultValue={patient.color} /></label>
+            <label>{t("Allergies")}<input name="allergies" defaultValue={patient.allergies.join('; ')} /></label>
+            <label>{t("Distinguishing features")}<input name="distinguishingFeatures" defaultValue={patient.distinguishingFeatures} /></label>
+            <label>{t("Date of birth")}<input name="dateOfBirth" type="date" defaultValue={patient.dateOfBirth ?? ''} /></label>
+            <label>{t("Photo URL")}<input name="photoUrl" type="url" defaultValue={patient.photoUrl} /></label>
+            <label className="toggle-field"><input name="isActive" type="checkbox" defaultChecked={patient.isActive} />{t("Active patient")}</label>
+            <button className="secondary-action" type="submit"><Save size={16} />{t("Save patient")}</button>
           </form> : <dl className="record-details">
-            <div><dt>Species</dt><dd>{patient.species}</dd></div>
-            <div><dt>Breed</dt><dd>{patient.breed || 'Unknown'}</dd></div>
-            <div><dt>Sex</dt><dd>{patient.sex || 'Unknown'}</dd></div>
-            <div><dt>Weight</dt><dd>{patient.weight || 'Not recorded'}</dd></div>
-            <div><dt>Color</dt><dd>{patient.color || 'Unknown'}</dd></div>
-            <div><dt>Allergies</dt><dd>{patient.allergies.join(', ') || 'Unknown / not assessed'}</dd></div>
-            <div><dt>Features</dt><dd>{patient.distinguishingFeatures || 'Not recorded'}</dd></div>
-            <div><dt>Last visit</dt><dd>{patient.lastVisit || 'Not recorded'}</dd></div>
+            <div><dt>{t("Species")}</dt><dd>{t(patient.species)}</dd></div>
+            <div><dt>{t("Breed")}</dt><dd>{patient.breed || t("Unknown")}</dd></div>
+            <div><dt>{t("Sex")}</dt><dd>{t(patient.sex || 'Unknown')}</dd></div>
+            <div><dt>{t("Weight")}</dt><dd>{patient.weight || t("Not recorded")}</dd></div>
+            <div><dt>{t("Color")}</dt><dd>{patient.color || t("Unknown")}</dd></div>
+            <div><dt>{t("Allergies")}</dt><dd>{patient.allergies.join(', ') || t("Unknown / not assessed")}</dd></div>
+            <div><dt>{t("Features")}</dt><dd>{patient.distinguishingFeatures || t("Not recorded")}</dd></div>
+            <div><dt>{t("Last visit")}</dt><dd>{patient.lastVisit || t("Not recorded")}</dd></div>
           </dl>}
         </section>
-      <section className="panel patient-consultation-history"><div className="panel-heading"><div><p className="eyebrow">Clinical timeline</p><h2>Recent consultations</h2></div><Link className="secondary-action" to={`/consultations?query=${encodeURIComponent(patient.name)}`}>View all</Link></div><div className="history-list">{consultations.slice(0, 4).map((consultation) => <Link to={`/consultations/${consultation.id}`} key={consultation.id}><span>{new Date(consultation.startedAt).toLocaleDateString()}</span><strong>{consultation.diagnosis || (consultation.status === 'InProgress' ? 'Clinical notes in progress' : 'No diagnosis recorded')}</strong><small>{consultation.clinicianName} · {consultation.status === 'InProgress' ? 'In progress' : consultation.status}</small></Link>)}</div>{consultations.length === 0 && <p className="empty-state">No consultations have been recorded for this patient.</p>}</section>
+      <section className="panel patient-consultation-history"><div className="panel-heading"><div><p className="eyebrow">{t("Clinical timeline")}</p><h2>{t("Recent consultations")}</h2></div><Link className="secondary-action" to={`/consultations?query=${encodeURIComponent(patient.name)}`}>{t("View all")}</Link></div><div className="history-list">{consultations.slice(0, 4).map((consultation) => <Link to={`/consultations/${consultation.id}`} key={consultation.id}><span>{new Date(consultation.startedAt).toLocaleDateString(i18n.language)}</span><strong>{consultation.diagnosis || (consultation.status === 'InProgress' ? t("Clinical notes in progress") : t("No diagnosis recorded"))}</strong><small>{consultation.clinicianName} · {t(consultation.status === 'InProgress' ? t("In progress") : consultation.status)}</small></Link>)}</div>{consultations.length === 0 && <p className="empty-state">{t("No consultations have been recorded for this patient.")}</p>}</section>
       </section>
-      <section className="panel patient-guardians"><div className="panel-heading"><div><p className="eyebrow">Guardians</p><h2>Linked contacts</h2></div><Link className="secondary-action" to={`/guardians/new?patientId=${patient.id}&returnTo=${encodeURIComponent(`/patients/${patient.id}`)}`}><Pencil size={16} /> Add new guardian</Link></div><div className="guardian-list">{patient.guardians.map((linkedGuardian) => <article key={linkedGuardian.id}><strong>{linkedGuardian.name}</strong><span>{linkedGuardian.phone}{linkedGuardian.alternatePhone && ` · ${linkedGuardian.alternatePhone}`}</span><small>{linkedGuardian.id === patient.guardianId ? 'Primary guardian' : 'Additional guardian'}</small>{linkedGuardian.id !== patient.guardianId && <button className="icon-button" type="button" aria-label={`Remove ${linkedGuardian.name}`} onClick={() => void removeGuardian(linkedGuardian.id)}><Trash2 size={16} /></button>}</article>)}</div>{availableGuardians.some((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)) && <div className="existing-guardian"><label>Link an existing guardian<select value={guardianIdToLink} onChange={(event) => setGuardianIdToLink(event.target.value)}><option value="">Select guardian</option>{availableGuardians.filter((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} - {candidate.phone}</option>)}</select></label><button className="secondary-action" type="button" disabled={!guardianIdToLink} onClick={() => void linkExistingGuardian()}>Link guardian</button></div>}</section>
-      <section className="panel documents"><div className="panel-heading"><div><p className="eyebrow">Linked documents</p><h2>Clinical forms</h2></div><FileText size={22} /></div><div className="document-actions">{documentOptions.map((document) => <button key={document.id} type="button" onClick={() => void prepareDocument(document.id)}><FileText size={18} />{document.label}</button>)}</div></section>
+      <section className="panel patient-guardians"><div className="panel-heading"><div><p className="eyebrow">{t("Guardians")}</p><h2>{t("Linked contacts")}</h2></div><Link className="secondary-action" to={`/guardians/new?patientId=${patient.id}&returnTo=${encodeURIComponent(`/patients/${patient.id}`)}`}><Pencil size={16} />{t("Add new guardian")}</Link></div><div className="guardian-list">{patient.guardians.map((linkedGuardian) => <article key={linkedGuardian.id}><strong>{linkedGuardian.name}</strong><span>{linkedGuardian.phone}{linkedGuardian.alternatePhone && ` · ${linkedGuardian.alternatePhone}`}</span><small>{linkedGuardian.id === patient.guardianId ? t("Primary guardian") : t("Additional guardian")}</small>{linkedGuardian.id !== patient.guardianId && <button className="icon-button" type="button" aria-label={t("Remove {{value0}}", { value0: linkedGuardian.name })} onClick={() => void removeGuardian(linkedGuardian.id)}><Trash2 size={16} /></button>}</article>)}</div>{availableGuardians.some((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)) && <div className="existing-guardian"><label>{t("Link an existing guardian")}<select value={guardianIdToLink} onChange={(event) => setGuardianIdToLink(event.target.value)}><option value="">{t("Select guardian")}</option>{availableGuardians.filter((candidate) => !patient.guardians.some((linkedGuardian) => linkedGuardian.id === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name} - {candidate.phone}</option>)}</select></label><button className="secondary-action" type="button" disabled={!guardianIdToLink} onClick={() => void linkExistingGuardian()}>{t("Link guardian")}</button></div>}</section>
+      <section className="panel documents"><div className="panel-heading"><div><p className="eyebrow">{t("Linked documents")}</p><h2>{t("Clinical forms")}</h2></div><FileText size={22} /></div><div className="document-actions">{documentOptions.map((document) => <button key={document.id} type="button" onClick={() => void prepareDocument(document.id)}><FileText size={18} />{t(document.label)}</button>)}</div></section>
     </>
   )
 }

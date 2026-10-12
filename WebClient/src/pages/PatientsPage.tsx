@@ -1,9 +1,12 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState } from 'react'
 import { Search, Stethoscope, UserRoundPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { type Patient, getJson } from '../api'
 
 export function PatientsPage() {
+  const { t } = useTranslation()
+
   const [patients, setPatients] = useState<Patient[]>([])
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
@@ -25,20 +28,20 @@ export function PatientsPage() {
 
   return (
     <>
-      <header className="page-header"><div><p className="eyebrow">Clinical records</p><h1>Patients</h1></div><div className="header-actions"><Link className="secondary-action" to="/guardians/new"><UserRoundPlus size={17} /> Register guardian</Link><Link className="primary-action" to="/patients/new"><Stethoscope size={18} /> Register patient</Link></div></header>
-      {error && <div className="notice error" role="alert">{error}</div>}
-      <Link className="secondary-action" to="/guardians">Guardian directory</Link>
+      <header className="page-header"><div><p className="eyebrow">{t("Clinical records")}</p><h1>{t("Patients")}</h1></div><div className="header-actions"><Link className="secondary-action" to="/guardians/new"><UserRoundPlus size={17} />{t("Register guardian")}</Link><Link className="primary-action" to="/patients/new"><Stethoscope size={18} />{t("Register patient")}</Link></div></header>
+      {error && <div className="notice error" role="alert">{t(error)}</div>}
+      <Link className="secondary-action" to="/guardians">{t("Guardian directory")}</Link>
       <section className="panel patient-directory">
-        <label className="search-field"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Phone, guardian, or patient" /></label>
+        <label className="search-field"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Phone, guardian, or patient")} /></label>
         <div className="patient-list directory-list">
           {patients.map((patient) => (
             <Link className="patient-row" to={`/patients/${patient.id}`} key={patient.id}>
               <span className="pet-avatar">{patient.name[0]}</span>
-              <span><strong>{patient.name}</strong><small>{patient.species} · {patient.guardianName}</small></span>
+              <span><strong>{patient.name}</strong><small>{t(patient.species)} · {patient.guardianName}</small></span>
             </Link>
           ))}
         </div>
-        {!error && patients.length === 0 && <p className="empty-state">No patients match this search.</p>}
+        {!error && patients.length === 0 && <p className="empty-state">{t("No patients match this search.")}</p>}
       </section>
     </>
   )

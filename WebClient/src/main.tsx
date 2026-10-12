@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom'
 import { AuthenticationProvider, initializeAuthentication } from './auth.tsx'
+import { ClinicLanguage } from './ClinicLanguage'
+import './i18n'
 import './index.css'
 import App from './App.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
@@ -55,7 +57,7 @@ const router = createBrowserRouter(createRoutesFromElements(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthenticationProvider>
-      <RouterProvider router={router} />
+      <ClinicLanguage><RouterProvider router={router} /></ClinicLanguage>
     </AuthenticationProvider>
   </StrictMode>,
 )

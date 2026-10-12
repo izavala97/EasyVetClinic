@@ -1,3 +1,4 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthentication } from '../auth'
@@ -5,6 +6,8 @@ import { apiFetch, ensureSuccess, getJson, type ScheduleAppointment, type Clinic
 import { appointmentReasons, clinicDateTime } from '../schedule'
 
 export function AppointmentsPage() {
+  const { t } = useTranslation()
+
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { currentUser } = useAuthentication()
@@ -83,34 +86,34 @@ export function AppointmentsPage() {
   }
 
   return <>
-    <header className="page-header"><h1>Appointments</h1><Link to="/schedule">Schedule a visit</Link></header>
-    <p>Clinic time zone: {zone ?? 'Loading...'}</p>
-    {error && <div className="notice error" role="alert">{error}</div>}
-    {notice && <div className="notice" role="status">{notice}</div>}
+    <header className="page-header"><h1>{t("Appointments")}</h1><Link to="/schedule">{t("Schedule a visit")}</Link></header>
+    <p>{t("Clinic time zone:")} {zone ?? t("Loading...")}</p>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
+    {notice && <div className="notice" role="status">{t(notice)}</div>}
     <section className="schedule-layout">
-      <section className="panel"><label>Month<input type="month" value={month} onChange={event => { setMonth(event.target.value); setSelected(null) }} /></label>
+      <section className="panel"><label>{t("Month")}<input type="month" value={month} onChange={event => { setMonth(event.target.value); setSelected(null) }} /></label>
         {appointments.map(item => <button className="appointment-management-row" type="button" key={item.id} onClick={() => select(item)}>
           <strong>{item.patientName}</strong><span>{zone && `${clinicDateTime(item.startsAt, zone).date} ${clinicDateTime(item.startsAt, zone).time}`}</span>
-          <span>{item.clinicianName} · {item.status}</span></button>)}
-        {!appointments.length && <p>No appointments this month.</p>}
+          <span>{item.clinicianName} · {t(item.status)}</span></button>)}
+        {!appointments.length && <p>{t("No appointments this month.")}</p>}
       </section>
       {selected ? <section className="panel"><h2>{selected.patientName}</h2>
-        {selected.consultationId ? <Link to={`/consultations/${selected.consultationId}`}>Open linked consultation</Link> :
+        {selected.consultationId ? <Link to={`/consultations/${selected.consultationId}`}>{t("Open linked consultation")}</Link> :
           <form onSubmit={event => void save(event)}><fieldset disabled={pending}>
-            <label>Date<input type="date" value={date} required onChange={event => setDate(event.target.value)} /></label>
-            <label>Clinic-local time<input type="time" value={time} required onChange={event => setTime(event.target.value)} /></label>
-            <label>Duration<input type="number" min={5} max={480} value={selected.durationMinutes} onChange={event => setSelected({ ...selected, durationMinutes: Number(event.target.value) })} /></label>
-            <label>Clinician<select value={selected.clinicianObjectId} required onChange={event => setSelected({ ...selected, clinicianObjectId: event.target.value })}>
-              <option value="">Select clinician</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}</select></label>
-            <label>Reason<select value={selected.reason} onChange={event => setSelected({ ...selected, reason: event.target.value })}>
-              {appointmentReasons.map(value => <option key={value}>{value}</option>)}</select></label>
-            <label>Status<select value={selected.status} onChange={event => setSelected({ ...selected, status: event.target.value })}>
-              {['Scheduled', 'CheckedIn', 'Cancelled', 'NoShow'].map(value => <option key={value}>{value}</option>)}</select></label>
-            <button className="primary-action" type="submit">Save appointment</button>
+            <label>{t("Date")}<input type="date" value={date} required onChange={event => setDate(event.target.value)} /></label>
+            <label>{t("Clinic-local time")}<input type="time" value={time} required onChange={event => setTime(event.target.value)} /></label>
+            <label>{t("Duration")}<input type="number" min={5} max={480} value={selected.durationMinutes} onChange={event => setSelected({ ...selected, durationMinutes: Number(event.target.value) })} /></label>
+            <label>{t("Clinician")}<select value={selected.clinicianObjectId} required onChange={event => setSelected({ ...selected, clinicianObjectId: event.target.value })}>
+              <option value="">{t("Select clinician")}</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}</select></label>
+            <label>{t("Reason")}<select value={selected.reason} onChange={event => setSelected({ ...selected, reason: event.target.value })}>
+              {appointmentReasons.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+            <label>{t("Status")}<select value={selected.status} onChange={event => setSelected({ ...selected, status: event.target.value })}>
+              {['Scheduled', 'CheckedIn', 'Cancelled', 'NoShow'].map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+            <button className="primary-action" type="submit">{t("Save appointment")}</button>
           </fieldset></form>}
         {canStart && ['Scheduled', 'CheckedIn', 'InProgress'].includes(selected.status) &&
-          <button className="secondary-action" type="button" disabled={pending} onClick={() => void start()}>{selected.consultationId ? 'Resume consultation' : 'Start consultation'}</button>}
-      </section> : <p>Select an appointment.</p>}
+          <button className="secondary-action" type="button" disabled={pending} onClick={() => void start()}>{selected.consultationId ? t("Resume consultation") : t("Start consultation")}</button>}
+      </section> : <p>{t("Select an appointment.")}</p>}
     </section>
   </>
 }

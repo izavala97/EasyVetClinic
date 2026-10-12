@@ -36,6 +36,8 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         try { _ = TimeZoneInfo.FindSystemTimeZoneById(request.TimeZoneId); }
         catch (TimeZoneNotFoundException) { return ValidationProblem("Select a valid time zone identifier."); }
         catch (InvalidTimeZoneException) { return ValidationProblem("The selected time zone is invalid."); }
+        if (request.Language is not null && request.Language is not ("en" or "es"))
+            return ValidationProblem("Select a supported language: en or es.");
 
         var clinic = await dbContext.Clinics.SingleOrDefaultAsync(candidate => candidate.Id == ClinicId);
         if (clinic is null)
@@ -47,6 +49,7 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         clinic.Address = request.Address.Trim();
         clinic.LogoUrl = request.LogoUrl.Trim();
         clinic.TimeZoneId = request.TimeZoneId;
+        if (request.Language is not null) clinic.Language = request.Language;
         await dbContext.SaveChangesAsync();
         return Ok(MapClinicProfile(clinic));
     }
@@ -130,5 +133,6 @@ public sealed class ClinicController(ClinicDbContext dbContext, CurrentClinic cu
         clinic.Name,
         clinic.Address,
         clinic.LogoUrl,
-        clinic.TimeZoneId);
+        clinic.TimeZoneId,
+        clinic.Language);
 }

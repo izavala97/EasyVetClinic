@@ -35,6 +35,7 @@ public class ClinicDbContext(DbContextOptions options) : DbContext(options)
             entity.Property(clinic => clinic.Address).HasMaxLength(500);
             entity.Property(clinic => clinic.SuspensionReason).HasMaxLength(500);
             entity.Property(clinic => clinic.TimeZoneId).HasMaxLength(100);
+            entity.Property(clinic => clinic.Language).HasMaxLength(10).HasDefaultValue("en").IsRequired();
         });
 
         modelBuilder.Entity<ClinicInvitation>(entity =>

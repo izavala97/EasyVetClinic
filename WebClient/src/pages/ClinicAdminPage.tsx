@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState } from 'react'
 import { apiFetch, ensureSuccess, getJson, type ClinicUser, type CreatedInvitation, type Invitation } from '../api'
 import { useAuthentication } from '../auth'
@@ -5,6 +7,8 @@ import { useAuthentication } from '../auth'
 const roles = ['ClinicAdmin', 'Veterinarian', 'Staff']
 
 export function ClinicAdminPage() {
+  const { t } = useTranslation()
+
   const { refreshCurrentUser } = useAuthentication()
   const [users, setUsers] = useState<ClinicUser[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -76,29 +80,29 @@ export function ClinicAdminPage() {
   }
 
   return <>
-    <header className="page-header"><div><p className="eyebrow">Clinic administrator</p><h1>Staff and invitations</h1></div></header>
-    {error && <div className="notice error" role="alert">{error}</div>}
+    <header className="page-header"><div><p className="eyebrow">{t("Clinic administrator")}</p><h1>{t("Staff and invitations")}</h1></div></header>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
     <form className="panel clinic-profile-form" onSubmit={event => void invite(event)}>
-      <h2>Invite a team member</h2><p>The recipient signs in with this email to accept a single-use link valid for seven days. Share the link yourself; no email is sent automatically.</p>
-      <label>Email<input name="email" type="email" maxLength={254} required /></label>
-      <label>Role<select name="role" defaultValue="Staff">{roles.map(role => <option key={role}>{role}</option>)}</select></label>
-      <button className="primary-action" disabled={busy || loading}>Create invitation link</button>
+      <h2>{t("Invite a team member")}</h2><p>{t("The recipient signs in with this email to accept a single-use link valid for seven days. Share the link yourself; no email is sent automatically.")}</p>
+      <label>{t("Email")}<input name="email" type="email" maxLength={254} required /></label>
+      <label>{t("Role")}<select name="role" defaultValue="Staff">{roles.map(role => <option value={role} key={role}>{t(role)}</option>)}</select></label>
+      <button className="primary-action" disabled={busy || loading}>{t("Create invitation link")}</button>
     </form>
-    {link && <div className="notice"><label>Copy and share this link now (shown only once)<input className="invitation-link" aria-label="Invitation link" readOnly value={link} onFocus={event => event.currentTarget.select()} /></label></div>}
-    <section className="panel admin-section"><h2>Team members</h2>
-      {loading ? <p>Loading staff...</p> : users.length === 0 && <p>No members yet. Invite the first clinic administrator above.</p>}
+    {link && <div className="notice"><label>{t("Copy and share this link now (shown only once)")}<input className="invitation-link" aria-label={t("Invitation link")} readOnly value={link} onFocus={event => event.currentTarget.select()} /></label></div>}
+    <section className="panel admin-section"><h2>{t("Team members")}</h2>
+      {loading ? <p>{t("Loading staff...")}</p> : users.length === 0 && <p>{t("No members yet. Invite the first clinic administrator above.")}</p>}
       {users.map(user => <form className="admin-member" key={user.id} onSubmit={event => void updateUser(event, user)}>
         <strong>{user.displayName}</strong>
-        <label>Role<select name="role" defaultValue={user.role} disabled={user.role === 'SuperAdmin'}>{(user.role === 'SuperAdmin' ? ['SuperAdmin'] : roles).map(role => <option key={role}>{role}</option>)}</select></label>
-        <label><input name="isActive" type="checkbox" defaultChecked={user.isActive} disabled={user.role === 'SuperAdmin'} /> Active</label>
-        <button className="secondary-action" disabled={busy || user.role === 'SuperAdmin'}>Save access</button>
+        <label>{t("Role")}<select name="role" defaultValue={user.role} disabled={user.role === 'SuperAdmin'}>{(user.role === 'SuperAdmin' ? ['SuperAdmin'] : roles).map(role => <option value={role} key={role}>{t(role)}</option>)}</select></label>
+        <label><input name="isActive" type="checkbox" defaultChecked={user.isActive} disabled={user.role === 'SuperAdmin'} />{t("Active")}</label>
+        <button className="secondary-action" disabled={busy || user.role === 'SuperAdmin'}>{t("Save access")}</button>
       </form>)}
     </section>
-    <section className="panel admin-section"><h2>Invitations</h2>
-      {invitations.length === 0 && <p>No invitations.</p>}
+    <section className="panel admin-section"><h2>{t("Invitations")}</h2>
+      {invitations.length === 0 && <p>{t("No invitations.")}</p>}
       {invitations.map(invitation => {
         const pending = !invitation.isUsed && !invitation.isRevoked && new Date(invitation.expiresAt) > new Date()
-        return <div className="admin-member" key={invitation.id}><div><strong>{invitation.email}</strong><p>{invitation.role} · {invitation.isUsed ? 'Accepted' : invitation.isRevoked ? 'Revoked' : pending ? 'Pending' : 'Expired'} · Expires {new Date(invitation.expiresAt).toLocaleString()}</p></div>{pending && <button className="secondary-action" disabled={busy} onClick={() => void revoke(invitation.id)}>Revoke</button>}</div>
+        return <div className="admin-member" key={invitation.id}><div><strong>{invitation.email}</strong><p>{t(invitation.role)} · {invitation.isUsed ? t("Accepted") : invitation.isRevoked ? t("Revoked") : pending ? t("Pending") : t("Expired")} {t("· Expires")} {new Date(invitation.expiresAt).toLocaleString(i18n.language)}</p></div>{pending && <button className="secondary-action" disabled={busy} onClick={() => void revoke(invitation.id)}>{t("Revoke")}</button>}</div>
       })}
     </section>
   </>

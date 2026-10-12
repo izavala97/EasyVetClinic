@@ -74,6 +74,22 @@ try {
     }
     $profile.timeZoneId = 'America/Mexico_City'
     $savedProfile = Request $owner 'clinic' 'PUT' $profile 200 $clinic.id
+    Check ($savedProfile.language -eq 'en') 'Existing clinics must default to English.'
+    $profile.language = 'es'
+    $savedLanguage = Request $owner 'clinic' 'PUT' $profile 200 $clinic.id
+    Check ($savedLanguage.language -eq 'es') 'Clinic language must be saved.'
+    $staffProfile = Request $staff 'clinic'
+    Check ($staffProfile.language -eq 'es') 'All clinic members must receive the same language.'
+    $null = Request $staff 'clinic' 'PUT' $profile 403
+    $profile.language = 'fr'
+    $null = Request $owner 'clinic' 'PUT' $profile 400 $clinic.id
+    $persistedProfile = Request $owner 'clinic' 'GET' $null 200 $clinic.id
+    Check ($persistedProfile.language -eq 'es') 'Invalid languages must not overwrite the saved preference.'
+    $profile.Remove('language')
+    $preservedLanguage = Request $owner 'clinic' 'PUT' $profile 200 $clinic.id
+    Check ($preservedLanguage.language -eq 'es') 'Updates without language must preserve the preference.'
+    $profile.language = 'en'
+    $null = Request $owner 'clinic' 'PUT' $profile 200 $clinic.id
     Check ($savedProfile.name -eq 'Clinical test' -and $savedProfile.timeZoneId -eq 'America/Mexico_City') 'Clinic settings must save without clinic-wide clinician credentials.'
     Check ($null -eq $savedProfile.PSObject.Properties['veterinarianName'] -and
         $null -eq $savedProfile.PSObject.Properties['veterinarianTitles'] -and

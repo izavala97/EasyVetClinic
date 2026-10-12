@@ -27,7 +27,11 @@ During development, Vite proxies `/api` and `/health` to `http://localhost:5120`
 
 ## Conventions
 
-Components, types, properties, API clients, and other technical identifiers use English. User-facing content will be localized through the client as the clinical workflows are completed.
+Components, types, properties, API clients, and other technical identifiers use English. The interface supports English and Spanish, selected under **Clinic profile > Language** and saved per clinic. Existing and newly created clinics default to English. The preference applies to all members and is loaded again on clinic switching and reload.
+
+Localization uses `useTranslation` and English source-text keys, with Spanish resources in `src/locales/es.ts`. Use complete messages with `{{variable}}` interpolation and `_one` / `_other` plural variants rather than concatenating translated fragments. `src/format.ts` formats dates and currency with the clinic language; ISO form values, time-zone calculations, currency codes, and API enum values remain unchanged. Translate option labels, never their submitted values. User names, catalog content, clinical notes, and other entered text are not translated. Unknown service diagnostics remain visible verbatim rather than being hidden.
+
+To add a language, add its resource dictionary and register its code in `src/i18n.ts`, the API's clinic language validation, and the client `ClinicProfile` language type. No database redesign is required. Keep translations and interpolation coverage verified with `npm test`. Hosted Entra authentication screens are configured separately in Entra; this clinic setting does not change them.
 
 Form controls inside `panel` containers share label spacing, input styles, and visible keyboard focus. Use `workflow-controls` for equivalent controls outside a panel and `clinical-entry-form` for vertically spaced clinical forms. Guardian intake search starts at two characters, shows at most five matches in a bounded `guardian-options` list, and keeps selected contacts visible separately. `patient-options` is reserved for the positioned patient-combobox popup.
 

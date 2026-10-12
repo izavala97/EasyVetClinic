@@ -9,6 +9,7 @@ public sealed class Clinic
     public bool IsSuspended { get; set; }
     public string SuspensionReason { get; set; } = string.Empty;
     public string TimeZoneId { get; set; } = "UTC";
+    public string Language { get; set; } = "en";
     public int SchedulingVersion { get; set; }
     public List<Guardian> Guardians { get; } = [];
     public List<ClinicUser> Users { get; } = [];

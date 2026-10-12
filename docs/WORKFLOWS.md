@@ -63,6 +63,14 @@ Prescription item identifiers survive edits. Each new consultation snapshots its
 
 Clinic settings and onboarding contain only clinic details, not a clinic-wide veterinarian identity. Professional titles and license numbers belong to individual clinic members. The obsolete clinic-wide veterinarian columns are removed; their values are not copied or retained as compatibility fields.
 
+## Clinic language
+
+Clinic administrators and the platform owner can choose English (`en`) or Spanish (`es`) under **Clinic profile > Language**. English is the default for existing and new clinics. The language is persisted per clinic, shared by all staff, and applied immediately after saving. Reloading or changing clinics loads that clinic's preference.
+
+Labels, navigation, workflow states, standard messages, prescription headings, document drafts, and receipts use the selected language. Date and currency display follows that language without changing appointment instants, time zones, monetary values, or currencies. Entered clinical notes, names, catalog content, and audit reasons remain unchanged. API payload values for roles, species, appointment reasons, and statuses retain their canonical values.
+
+The SQLite and SQL Server `AddClinicLanguage` migrations add the preference with an English default. Requests with unsupported language codes are rejected; profile updates omitting the language preserve the saved value. Entra sign-in page branding and language are separate settings.
+
 ## Patient intake and scheduling
 
 Only patient name, species, and a guardian relationship are required for initial intake. Unknown demographics and unassessed allergies can remain unspecified. Select the primary guardian explicitly when linking existing contacts.

@@ -64,6 +64,7 @@ export type ClinicProfile = {
   address: string
   logoUrl: string
   timeZoneId: string
+  language: 'en' | 'es'
 }
 
 export type CurrentUser = {

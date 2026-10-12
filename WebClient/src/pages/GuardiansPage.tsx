@@ -1,8 +1,11 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, ensureSuccess, getJson, type Guardian } from '../api'
 
 export function GuardiansPage() {
+  const { t } = useTranslation()
+
   const [contacts, setContacts] = useState<Guardian[]>([])
   const [selected, setSelected] = useState<Guardian | null>(null)
   const [query, setQuery] = useState('')
@@ -34,21 +37,21 @@ export function GuardiansPage() {
   }
 
   return <>
-    <header className="page-header"><h1>Guardians</h1><Link className="primary-action" to="/guardians/new">Register guardian</Link></header>
-    {error && <div className="notice error" role="alert">{error}</div>}{notice && <div className="notice" role="status">{notice}</div>}
+    <header className="page-header"><h1>{t("Guardians")}</h1><Link className="primary-action" to="/guardians/new">{t("Register guardian")}</Link></header>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}{notice && <div className="notice" role="status">{t(notice)}</div>}
     <section className="content-grid"><section className="panel">
-      <label>Search contacts<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or phone" /></label>
+      <label>{t("Search contacts")}<input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Name or phone")} /></label>
       {contacts.map(contact => <button className="appointment-management-row" key={contact.id} type="button" onClick={() => setSelected(contact)}>
         <strong>{contact.name}</strong><span>{contact.phone}</span></button>)}
-      {!contacts.length && <p>No matching guardians.</p>}
+      {!contacts.length && <p>{t("No matching guardians.")}</p>}
     </section>{selected && <form className="panel" onSubmit={event => void save(event)}><fieldset disabled={pending}>
-      <h2>Edit guardian</h2>
+      <h2>{t("Edit guardian")}</h2>
       {(['name', 'phone', 'alternatePhone', 'address', 'identityType', 'identityNumber', 'identityDocumentUrl'] as const).map(field =>
-        <label key={field}>{({ name: 'Name', phone: 'Phone', alternatePhone: 'Alternate phone', address: 'Address', identityType: 'Identity type',
-          identityNumber: 'Identity number', identityDocumentUrl: 'Identity document URL' })[field]}
+        <label key={field}>{t(({ name: 'Name', phone: 'Phone', alternatePhone: 'Alternate phone', address: 'Address', identityType: 'Identity type',
+          identityNumber: 'Identity number', identityDocumentUrl: 'Identity document URL' })[field])}
           <input value={selected[field]} type={field === 'identityDocumentUrl' ? 'url' : 'text'} required={field === 'name' || field === 'phone'}
             onChange={event => setSelected({ ...selected, [field]: event.target.value })} /></label>)}
-      <button type="submit" className="primary-action">Save guardian</button>
+      <button type="submit" className="primary-action">{t("Save guardian")}</button>
     </fieldset></form>}</section>
   </>
 }

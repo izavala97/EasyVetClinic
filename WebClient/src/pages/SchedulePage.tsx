@@ -1,9 +1,12 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, ensureSuccess, getJson, type Patient, type ScheduleAppointment, type Clinician, type ClinicProfile } from '../api'
 import { appointmentReasons, clinicDateTime } from '../schedule'
 
 export function SchedulePage() {
+  const { t } = useTranslation()
+
   const [zone, setZone] = useState<string | null>(null)
   const [month, setMonth] = useState('')
   const [date, setDate] = useState('')
@@ -70,13 +73,13 @@ export function SchedulePage() {
   const daily = zone ? appointments.filter(item => clinicDateTime(item.startsAt, zone).date === date) : []
 
   return <>
-    <header className="page-header"><h1>Schedule</h1><p>Clinic time zone: {zone ?? 'Loading...'}</p></header>
-    {error && <div className="notice error" role="alert">{error}</div>}
-    {notice && <div className="notice" role="status">{notice}</div>}
+    <header className="page-header"><h1>{t("Schedule")}</h1><p>{t("Clinic time zone:")} {zone ?? t("Loading...")}</p></header>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
+    {notice && <div className="notice" role="status">{t(notice)}</div>}
     <section className="schedule-layout"><section className="panel">
-      <label>Month<input type="month" value={month} onChange={event => { setMonth(event.target.value); setDate(`${event.target.value}-01`) }} /></label>
-      <div className="month-calendar" role="grid" aria-label="Appointment calendar">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <span key={day}>{day}</span>)}
+      <label>{t("Month")}<input type="month" value={month} onChange={event => { setMonth(event.target.value); setDate(`${event.target.value}-01`) }} /></label>
+      <div className="month-calendar" role="grid" aria-label={t("Appointment calendar")}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <span key={day}>{t(day)}</span>)}
         {cells.map((day, index) => day ? <button type="button" className={`calendar-day ${date === `${month}-${String(day).padStart(2, '0')}` ? 'selected' : ''}`}
           key={day} onClick={() => setDate(`${month}-${String(day).padStart(2, '0')}`)}>{day}
           {zone && appointments.some(item => clinicDateTime(item.startsAt, zone).date === `${month}-${String(day).padStart(2, '0')}`) && <i />}</button> :
@@ -85,22 +88,22 @@ export function SchedulePage() {
       <h2>{date}</h2>
       {daily.map(item => <Link className="schedule-item" key={item.id} to={`/appointments?appointmentId=${item.id}&month=${month}`}>
         <time>{zone && clinicDateTime(item.startsAt, zone).time}</time><div><strong>{item.patientName}</strong>
-          <span>{item.reason} · {item.durationMinutes} min · {item.status}</span></div><small>{item.clinicianName}</small></Link>)}
-      {!daily.length && <p>No appointments on this day.</p>}
+          <span>{t(item.reason)} · {item.durationMinutes} {t("min ·")} {t(item.status)}</span></div><small>{item.clinicianName}</small></Link>)}
+      {!daily.length && <p>{t("No appointments on this day.")}</p>}
     </section>
-      <form className="panel appointment-form" onSubmit={event => void submit(event)}><h2>Schedule a visit</h2>
-        <Link to="/patients/new?returnTo=/schedule">Register patient and guardian</Link>
+      <form className="panel appointment-form" onSubmit={event => void submit(event)}><h2>{t("Schedule a visit")}</h2>
+        <Link to="/patients/new?returnTo=/schedule">{t("Register patient and guardian")}</Link>
         <fieldset disabled={pending || !zone}>
-          <label>Search patients<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Patient, guardian or phone" /></label>
-          <label>Patient<select value={patientId} required onChange={event => setPatientId(event.target.value)}>
-            <option value="">Select patient</option>{patients.map(item => <option key={item.id} value={item.id}>{item.name} · {item.guardianName}</option>)}</select></label>
-          <label>Clinician<select value={clinicianId} required onChange={event => setClinicianId(event.target.value)}>
-            <option value="">Select clinician</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}</select></label>
-          <label>Date<input type="date" value={date} required onChange={event => setDate(event.target.value)} /></label>
-          <label>Clinic-local time<input type="time" value={time} required onChange={event => setTime(event.target.value)} /></label>
-          <label>Duration (minutes)<input type="number" min={5} max={480} value={duration} required onChange={event => setDuration(Number(event.target.value))} /></label>
-          <label>Reason<select value={reason} onChange={event => setReason(event.target.value)}>{appointmentReasons.map(value => <option key={value}>{value}</option>)}</select></label>
-          <button className="primary-action" type="submit">{pending ? 'Scheduling...' : 'Schedule visit'}</button>
+          <label>{t("Search patients")}<input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Patient, guardian or phone")} /></label>
+          <label>{t("Patient")}<select value={patientId} required onChange={event => setPatientId(event.target.value)}>
+            <option value="">{t("Select patient")}</option>{patients.map(item => <option key={item.id} value={item.id}>{item.name} · {item.guardianName}</option>)}</select></label>
+          <label>{t("Clinician")}<select value={clinicianId} required onChange={event => setClinicianId(event.target.value)}>
+            <option value="">{t("Select clinician")}</option>{clinicians.map(item => <option key={item.objectId} value={item.objectId}>{item.displayName}</option>)}</select></label>
+          <label>{t("Date")}<input type="date" value={date} required onChange={event => setDate(event.target.value)} /></label>
+          <label>{t("Clinic-local time")}<input type="time" value={time} required onChange={event => setTime(event.target.value)} /></label>
+          <label>{t("Duration (minutes)")}<input type="number" min={5} max={480} value={duration} required onChange={event => setDuration(Number(event.target.value))} /></label>
+          <label>{t("Reason")}<select value={reason} onChange={event => setReason(event.target.value)}>{appointmentReasons.map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+          <button className="primary-action" type="submit">{pending ? t("Scheduling...") : t("Schedule visit")}</button>
         </fieldset>
       </form>
     </section>

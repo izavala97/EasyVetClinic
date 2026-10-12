@@ -1,9 +1,12 @@
+import { useTranslation } from '../useTranslation'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, ensureSuccess, type ClinicMembership } from '../api'
 import { useAuthentication } from '../auth'
 
 export function InvitationPage() {
+  const { t } = useTranslation()
+
   const { selectClinic, signOut } = useAuthentication()
   const navigate = useNavigate()
   const [token] = useState(() => sessionStorage.getItem('clinicInvitation'))
@@ -32,9 +35,9 @@ export function InvitationPage() {
     navigate('/')
   }
 
-  return <section className="panel"><p className="eyebrow">Clinic invitation</p><h1>Join your clinic</h1><p>Sign in with the invited email address, then accept to join the clinic. Invitations expire after seven days and can only be accepted once.</p>
-    {error && <div className="notice error" role="alert">{error}</div>}
-    {!token && <div className="notice error">No invitation link found. Open the complete link provided by your administrator.</div>}
-    <div className="form-actions"><button className="primary-action" disabled={!token || busy} onClick={() => void accept()}>Accept invitation</button><button className="secondary-action" disabled={busy} onClick={cancel}>Cancel</button><button className="secondary-action" disabled={busy} onClick={() => void signOut()}>Sign out to switch accounts</button></div>
+  return <section className="panel"><p className="eyebrow">{t("Clinic invitation")}</p><h1>{t("Join your clinic")}</h1><p>{t("Sign in with the invited email address, then accept to join the clinic. Invitations expire after seven days and can only be accepted once.")}</p>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
+    {!token && <div className="notice error">{t("No invitation link found. Open the complete link provided by your administrator.")}</div>}
+    <div className="form-actions"><button className="primary-action" disabled={!token || busy} onClick={() => void accept()}>{t("Accept invitation")}</button><button className="secondary-action" disabled={busy} onClick={cancel}>{t("Cancel")}</button><button className="secondary-action" disabled={busy} onClick={() => void signOut()}>{t("Sign out to switch accounts")}</button></div>
   </section>
 }

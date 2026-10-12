@@ -1,8 +1,11 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiFetch, ensureSuccess, getJson, type Guardian, type Patient } from '../api'
 
 export function RegistrationPage({ mode }: { mode: 'guardian' | 'patient' }) {
+  const { t } = useTranslation()
+
   const navigate = useNavigate()
   const location = useLocation()
   const params = new URLSearchParams(location.search)
@@ -59,68 +62,68 @@ export function RegistrationPage({ mode }: { mode: 'guardian' | 'patient' }) {
   }
 
   return <>
-    <Link className="back-link" to={returnTo ?? '/patients'}>Back to patients</Link>
-    <header className="page-header"><div><p className="eyebrow">Quick intake</p><h1>{mode === 'guardian' ? 'Register guardian' : 'Register patient and guardian'}</h1></div></header>
-    {error && <div className="notice error" role="alert">{error}</div>}
+    <Link className="back-link" to={returnTo ?? '/patients'}>{t("Back to patients")}</Link>
+    <header className="page-header"><div><p className="eyebrow">{t("Quick intake")}</p><h1>{mode === 'guardian' ? t("Register guardian") : t("Register patient and guardian")}</h1></div></header>
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
     <form className="panel registration-form" onSubmit={event => void submit(event)}>
       <fieldset disabled={pending}>
         {mode === 'patient' && <>
-          <h2>Patient</h2>
+          <h2>{t("Patient")}</h2>
           {(['name', 'breed', 'weight', 'color', 'allergies'] as const).map(field => <label key={field}>
-            {({ name: 'Patient name', breed: 'Breed (optional)', weight: 'Initial weight (optional)', color: 'Color (optional)', allergies: 'Allergies (blank means unknown / not assessed)' })[field]}
+            {t(({ name: 'Patient name', breed: 'Breed (optional)', weight: 'Initial weight (optional)', color: 'Color (optional)', allergies: 'Allergies (blank means unknown / not assessed)' })[field])}
             <input value={patient[field]} required={field === 'name'} onChange={event => setPatient({ ...patient, [field]: event.target.value })} />
           </label>)}
-          <label>Species<select value={patient.species} onChange={event => setPatient({ ...patient, species: event.target.value })}>
-            {['Canine', 'Feline', 'Avian', 'Other'].map(value => <option key={value}>{value}</option>)}</select></label>
-          <label>Sex<select value={patient.sex} onChange={event => setPatient({ ...patient, sex: event.target.value })}>
-            {['Unknown', 'Female', 'Male'].map(value => <option key={value}>{value}</option>)}</select></label>
-          <h2>Guardians</h2>
-          {!!selectedGuardians.length && <div className="selected-guardians" role="group" aria-label="Selected guardians">
+          <label>{t("Species")}<select value={patient.species} onChange={event => setPatient({ ...patient, species: event.target.value })}>
+            {['Canine', 'Feline', 'Avian', 'Other'].map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+          <label>{t("Sex")}<select value={patient.sex} onChange={event => setPatient({ ...patient, sex: event.target.value })}>
+            {['Unknown', 'Female', 'Male'].map(value => <option value={value} key={value}>{t(value)}</option>)}</select></label>
+          <h2>{t("Guardians")}</h2>
+          {!!selectedGuardians.length && <div className="selected-guardians" role="group" aria-label={t("Selected guardians")}>
             {selectedGuardians.map(item => <div className="selected-guardian" key={item.id}>
               <span><strong>{item.name}</strong><small>{item.phone}</small></span>
-              <button className="secondary-action" type="button" aria-label={`Remove guardian ${item.name}`} onClick={() => {
+              <button className="secondary-action" type="button" aria-label={t("Remove guardian {{value0}}", { value0: item.name })} onClick={() => {
                 setGuardianIds(guardianIds.filter(id => id !== item.id))
                 if (primaryId === item.id) setPrimaryId('')
-              }}>Remove</button>
+              }}>{t("Remove")}</button>
             </div>)}
           </div>}
-          <label>Search existing contacts<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or phone" aria-describedby="guardian-search-help" /></label>
+          <label>{t("Search existing contacts")}<input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Name or phone")} aria-describedby="guardian-search-help" /></label>
           <p id="guardian-search-help" className="guardian-search-help" role="status">
-            {search.length < 2 ? 'Type at least 2 characters to find a guardian.' :
-              !matching.length ? 'No unselected contacts match your search.' :
-              matching.length > 5 ? `Showing 5 of ${matching.length} matches. Refine your search to find another guardian.` :
-              `${matching.length} matching contact${matching.length === 1 ? '' : 's'}.`}
+            {search.length < 2 ? t("Type at least 2 characters to find a guardian.") :
+              !matching.length ? t("No unselected contacts match your search.") :
+              matching.length > 5 ? t('Showing 5 of {{count}} matches. Refine your search to find another guardian.', { count: matching.length }) :
+              t('{{count}} matching contacts.', { count: matching.length })}
           </p>
-          {!!matching.length && <div className="guardian-options" role="group" aria-label="Matching guardians">
+          {!!matching.length && <div className="guardian-options" role="group" aria-label={t("Matching guardians")}>
             {matching.slice(0, 5).map(item => <button type="button" className="guardian-option" key={item.id}
-              aria-label={`Add guardian ${item.name}`} onClick={() => {
+              aria-label={t("Add guardian {{value0}}", { value0: item.name })} onClick={() => {
                 setGuardianIds([...guardianIds, item.id])
                 setQuery('')
-              }}><span><strong>{item.name}</strong><small>{item.phone}</small></span><span>Add</span></button>)}
+              }}><span><strong>{item.name}</strong><small>{item.phone}</small></span><span>{t("Add")}</span></button>)}
           </div>}
-          {!!guardianIds.length && <label>Primary guardian<select required value={primaryId} onChange={event => setPrimaryId(event.target.value)}>
-            <option value="">Select primary guardian</option>
+          {!!guardianIds.length && <label>{t("Primary guardian")}<select required value={primaryId} onChange={event => setPrimaryId(event.target.value)}>
+            <option value="">{t("Select primary guardian")}</option>
             {selectedGuardians.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select></label>}
-          <label className="toggle-field"><input type="checkbox" checked={newContact} onChange={event => setNewContact(event.target.checked)} /> Register a new guardian without leaving this form</label>
+          <label className="toggle-field"><input type="checkbox" checked={newContact} onChange={event => setNewContact(event.target.checked)} />{t("Register a new guardian without leaving this form")}</label>
         </>}
         {newContact && <section className="intake-contact-form">
-          <h2>New guardian</h2>
+          <h2>{t("New guardian")}</h2>
           {(['name', 'phone', 'alternatePhone', 'address'] as const).map(field => <label key={field}>
-            {({ name: 'Full name', phone: 'Phone', alternatePhone: 'Alternate phone', address: 'Address' })[field]}
+            {t(({ name: 'Full name', phone: 'Phone', alternatePhone: 'Alternate phone', address: 'Address' })[field])}
             <input value={contact[field]} type={field.includes('Phone') || field === 'phone' ? 'tel' : 'text'}
               required={field === 'name' || field === 'phone'} onChange={event => setContact({ ...contact, [field]: event.target.value })} />
           </label>)}
-          {duplicate && <p className="notice error">A contact with this phone already exists. Select that contact to avoid duplicates.</p>}
-          <details><summary>Identity details (optional)</summary>
+          {duplicate && <p className="notice error">{t("A contact with this phone already exists. Select that contact to avoid duplicates.")}</p>}
+          <details><summary>{t("Identity details (optional)")}</summary>
             {(['identityType', 'identityNumber', 'identityDocumentUrl'] as const).map(field => <label key={field}>
-              {({ identityType: 'Identity type', identityNumber: 'Identity number', identityDocumentUrl: 'Identity document URL' })[field]}
+              {t(({ identityType: 'Identity type', identityNumber: 'Identity number', identityDocumentUrl: 'Identity document URL' })[field])}
               <input type={field === 'identityDocumentUrl' ? 'url' : 'text'} value={contact[field]} onChange={event => setContact({ ...contact, [field]: event.target.value })} />
             </label>)}
           </details>
         </section>}
         <button className="primary-action" type="submit" disabled={mode === 'patient' && ((!guardianIds.length && !newContact) || (newContact && duplicate))}>
-          {pending ? 'Registering...' : mode === 'guardian' ? 'Register guardian' : 'Register patient'}
+          {pending ? t("Registering...") : mode === 'guardian' ? t("Register guardian") : t("Register patient")}
         </button>
       </fieldset>
     </form>

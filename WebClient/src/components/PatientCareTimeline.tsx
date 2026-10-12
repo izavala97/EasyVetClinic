@@ -1,8 +1,12 @@
+import { useTranslation } from '../useTranslation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiFetch, ensureSuccess, getJson, type WeightRecord, type VaccinationRecord } from '../api'
 import { useAuthentication } from '../auth'
+import { formatDate } from '../format'
 
 export function PatientCareTimeline({ patientId, onWeightSaved }: { patientId: string; onWeightSaved: () => void }) {
+  const { t } = useTranslation()
+
   const { currentUser } = useAuthentication()
   const canRecord = ['ClinicAdmin', 'Veterinarian', 'SuperAdmin'].includes(currentUser?.role ?? '')
   const [weights, setWeights] = useState<WeightRecord[]>([])
@@ -42,28 +46,28 @@ export function PatientCareTimeline({ patientId, onWeightSaved }: { patientId: s
   }
 
   return <section className="content-grid care-timeline">
-    {error && <div className="notice error" role="alert">{error}</div>}
-    <section className="panel"><h2>Weight history</h2>
-      {weights.map(item => <p key={item.id}>{item.measuredOn}: <strong>{item.value} {item.unit}</strong> · {item.recordedBy}</p>)}
-      {!weights.length && <p>No structured weight measurements recorded.</p>}
+    {error && <div className="notice error" role="alert">{t(error)}</div>}
+    <section className="panel"><h2>{t("Weight history")}</h2>
+      {weights.map(item => <p key={item.id}>{formatDate(item.measuredOn)}: <strong>{item.value} {item.unit}</strong> · {item.recordedBy}</p>)}
+      {!weights.length && <p>{t("No structured weight measurements recorded.")}</p>}
       {canRecord && <form className="clinical-entry-form" onSubmit={event => void record(event, 'weights')}>
-        <label>Weight<input name="value" type="number" min="0.001" step="0.001" required /></label>
-        <label>Unit<select name="unit"><option>kg</option><option>lb</option></select></label>
-        <label>Measured on<input name="date" type="date" defaultValue={today} max={today} required /></label>
-        <button className="secondary-action" type="submit" disabled={pending}>Record weight</button>
+        <label>{t("Weight")}<input name="value" type="number" min="0.001" step="0.001" required /></label>
+        <label>{t("Unit")}<select name="unit"><option value="kg">{t("kg")}</option><option value="lb">{t("lb")}</option></select></label>
+        <label>{t("Measured on")}<input name="date" type="date" defaultValue={today} max={today} required /></label>
+        <button className="secondary-action" type="submit" disabled={pending}>{t("Record weight")}</button>
       </form>}
     </section>
-    <section className="panel"><h2>Vaccinations</h2>
-      {vaccines.map(item => <p key={item.id}><strong>{item.vaccineName}</strong> · {item.administeredOn} · Lot {item.lotNumber || 'not recorded'}
-        {item.nextDueOn && ` · Next due ${item.nextDueOn}`}</p>)}
-      {!vaccines.length && <p>No vaccinations recorded.</p>}
+    <section className="panel"><h2>{t("Vaccinations")}</h2>
+      {vaccines.map(item => <p key={item.id}><strong>{item.vaccineName}</strong> · {formatDate(item.administeredOn)} {t("· Lot")} {item.lotNumber || t("not recorded")}
+        {item.nextDueOn && ` · ${t('Next due')} ${formatDate(item.nextDueOn)}`}</p>)}
+      {!vaccines.length && <p>{t("No vaccinations recorded.")}</p>}
       {canRecord && <form className="clinical-entry-form" onSubmit={event => void record(event, 'vaccinations')}>
-        <label>Vaccine<input name="vaccineName" required /></label>
-        <label>Administered on<input name="date" type="date" defaultValue={today} max={today} required /></label>
-        <label>Next due<input name="nextDueOn" type="date" /></label>
-        <label>Lot number<input name="lotNumber" /></label>
-        <p>Recording a vaccination does not dispense stock or add a charge.</p>
-        <button className="secondary-action" type="submit" disabled={pending}>Record vaccination</button>
+        <label>{t("Vaccine")}<input name="vaccineName" required /></label>
+        <label>{t("Administered on")}<input name="date" type="date" defaultValue={today} max={today} required /></label>
+        <label>{t("Next due")}<input name="nextDueOn" type="date" /></label>
+        <label>{t("Lot number")}<input name="lotNumber" /></label>
+        <p>{t("Recording a vaccination does not dispense stock or add a charge.")}</p>
+        <button className="secondary-action" type="submit" disabled={pending}>{t("Record vaccination")}</button>
       </form>}
     </section>
   </section>

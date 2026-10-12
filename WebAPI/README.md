@@ -104,4 +104,6 @@ Invitations require matching authoritative `email`/`emails` claims on acceptance
 
 Catalog and inventory administration are available through the application. Legacy sales remain historical records; new commercial workflows must use billing accounts rather than bypassing the inventory ledger.
 
+`GET /api/clinic` includes `language`, defaulting to `en` for new and migrated clinics. Clinic administrators and the platform owner can persist `en` or `es` through `PUT /api/clinic`; unsupported codes are rejected and omitted/null values preserve the current preference. This clinic-wide setting controls client localization, not stored clinical text or identity-provider screens.
+
 See [Clinical and commercial workflows](../docs/WORKFLOWS.md) for additive migrations, concurrency, verification commands, and first-release limitations.
